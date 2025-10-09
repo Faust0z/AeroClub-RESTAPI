@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 from werkzeug.security import generate_password_hash, check_password_hash
 
-from .roles import get_role_by_name_srv, add_user_role_srv
+from .roles import get_role_by_name_srv
 from ..errors import EmailAlreadyExists, UserNotFound, AuthError
 from ..extensions import db
 from ..models import Users, Roles, Balances
@@ -44,14 +44,8 @@ def update_user_srv(email: str, data: dict) -> Users:
 
     try:
         for key, value in data.items():
-            if key == "roles":
-                for r in value:
-                    # Expecting: [{"name": "User"}, {"name": "Admin"}]
-                    role = get_role_by_name_srv(r["name"])
-                    add_user_role_srv(email=user.email, role=role)
-            elif hasattr(user, key):
+            if hasattr(user, key):
                 setattr(user, key, value)
-
         db.session.commit()
     except IntegrityError:
         db.session.rollback()

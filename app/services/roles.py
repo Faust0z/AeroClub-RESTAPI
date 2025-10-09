@@ -20,9 +20,10 @@ def get_user_roles_srv(email: str) -> list[Roles]:
     return user.roles
 
 
-def add_user_role_srv(email: str, role: Roles) -> list[Roles]:
+def add_user_role_srv(email: str, role_name: str) -> list[Roles]:
     from .users import get_user_by_email_srv  # To avoid circular import issues
     user = get_user_by_email_srv(email=email, include_roles=True)
+    role = get_role_by_name_srv(name=role_name)
 
     if role not in user.roles:
         user.roles.append(role)
@@ -30,13 +31,12 @@ def add_user_role_srv(email: str, role: Roles) -> list[Roles]:
     return user.roles
 
 
-def del_user_role_srv(email: str, role: Roles) -> list[Roles]:
+def del_user_role_srv(email: str, role_name: str) -> list[Roles]:
     from .users import get_user_by_email_srv  # To avoid circular import issues
     user = get_user_by_email_srv(email=email)
+    role = get_role_by_name_srv(name=role_name)
 
-    if not role in user.roles:
-        raise RoleNotFound
-
-    user.roles.remove(role)
-    db.session.commit()
+    if role in user.roles:
+        user.roles.remove(role)
+        db.session.commit()
     return user.roles

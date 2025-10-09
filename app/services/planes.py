@@ -52,3 +52,12 @@ def update_plane_srv(registration: str, data: dict) -> Planes:
     except IntegrityError:
         raise PlaneRegistrationAlreadyExists
     return plane
+
+
+def update_plane_status_srv(registration: str, plane_status: str) -> Planes:
+    plane = get_plane_by_registration_srv(registration=registration)
+    plane_status = get_plane_status_by_name_srv(name=plane_status)
+
+    plane.plane_status = plane_status
+    db.session.commit()
+    return plane

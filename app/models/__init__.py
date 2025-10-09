@@ -1,6 +1,5 @@
 from .airport_codes import AirportCodes
 from .balances import Balances
-from .fares import Fares
 from .flight_sessions import FlightSessions
 from .itineraries import Itineraries
 from .itinerary_types import ItineraryTypes

@@ -3,10 +3,9 @@ from flask_jwt_extended import jwt_required, get_jwt
 from marshmallow import ValidationError
 
 from app.errors import PermissionDenied, PermissionDeniedDisabledUser
-from app.schemas import FlightSessionsSchema, FlightSessionsAdminSchema
+from app.schemas import FlightSessionsSchema, FlightSessionsCreateSchema
 from app.services.flight_sessions import get_flight_sessions_srv, get_user_flight_sessions_srv, \
     create_flight_session_srv, get_flight_session_by_identifier_srv
-from ..extensions import db
 
 flight_sessions_bp = Blueprint("flight_sessions", __name__, url_prefix='/v1/flight_sessions')
 
@@ -38,7 +37,7 @@ def get_flight_sessions_endp():
         limit_date=limit_date
     )
 
-    schema = FlightSessionsAdminSchema(many=True)
+    schema = FlightSessionsSchema(many=True)
     return {"data": schema.dump(flight_sessions)}, 200
 
 
@@ -52,11 +51,11 @@ def get_my_flight_sessions_endp():
     user_email = jwt_data["sub"]
     flight_sessions = get_user_flight_sessions_srv(user_email)
 
-    schema = FlightSessionsSchema()
+    schema = FlightSessionsSchema(many=True)
     return {"data": schema.dump(flight_sessions)}, 200
 
 
-@flight_sessions_bp.get("/<string:email>")
+@flight_sessions_bp.get("/by-email/<string:email>")
 @jwt_required()
 def get_user_flight_sessions_endp(email: str):
     jwt_data = get_jwt()
@@ -66,11 +65,11 @@ def get_user_flight_sessions_endp(email: str):
 
     flight_sessions = get_user_flight_sessions_srv(email=email)
 
-    schema = FlightSessionsAdminSchema()
+    schema = FlightSessionsSchema(many=True)
     return {"data": schema.dump(flight_sessions)}, 200
 
 
-@flight_sessions_bp.get("/<int:email>")
+@flight_sessions_bp.get("/<int:flight_session_identifier>")
 @jwt_required()
 def get_flight_sessions_by_identifier_endp(flight_session_identifier: int):
     jwt_data = get_jwt()
@@ -80,7 +79,7 @@ def get_flight_sessions_by_identifier_endp(flight_session_identifier: int):
 
     flight_sessions = get_flight_session_by_identifier_srv(flight_session_identifier=flight_session_identifier)
 
-    schema = FlightSessionsAdminSchema()
+    schema = FlightSessionsSchema()
     return {"data": schema.dump(flight_sessions)}, 200
 
 
@@ -92,19 +91,14 @@ def create_flight_sessions_endp():
     if not "Admin" in caller_roles:
         raise PermissionDenied
 
-    schema = FlightSessionsAdminSchema(session=db.session)
-
     try:
-        data = schema.load(request.get_json())
+        data = FlightSessionsCreateSchema().load(request.get_json())
+        print(data)
     except ValidationError as err:
         return {"errors": err.messages}, 400
-    user_email = data.get("user_email")
-    instructor_email = data.get("instructor_email")
     admin_email = jwt_data["sub"]
     flight_session = create_flight_session_srv(
-        flight_session=data,
-        user_email=user_email,
-        instructor_email=instructor_email,
+        flight_session_data=data,
         admin_email=admin_email
     )
-    return {"data": schema.dump(flight_session)}, 201
+    return {"data": FlightSessionsSchema().dump(flight_session)}, 201

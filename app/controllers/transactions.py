@@ -1,9 +1,9 @@
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required, get_jwt
+from marshmallow import ValidationError
 
 from ..errors import PermissionDenied, PermissionDeniedDisabledUser
-from ..extensions import db
-from ..schemas import TransactionsSchema
+from ..schemas import TransactionsAdminSchema, TransactionsPublicSchema
 from ..services.transactions import get_transactions_srv, get_user_trans_by_email_srv, sum_user_transaction_srv
 
 transactions_bp = Blueprint("transactions", __name__, url_prefix='/v1/transactions')
@@ -32,7 +32,7 @@ def get_transactions_endp():
         limit_date=limit_date
     )
 
-    schema = TransactionsSchema(many=True)
+    schema = TransactionsAdminSchema(many=True)
     return {"data": schema.dump(transactions)}, 200
 
 
@@ -46,7 +46,7 @@ def get_my_transactions_endp():
     user_email = jwt_data["sub"]
     transactions = get_user_trans_by_email_srv(email=user_email)
 
-    schema = TransactionsSchema(many=True)
+    schema = TransactionsPublicSchema(many=True)
     return {"data": schema.dump(transactions)}, 200
 
 
@@ -60,7 +60,7 @@ def get_user_transactions_endp(email: str):
 
     transactions = get_user_trans_by_email_srv(email=email)
 
-    schema = TransactionsSchema(many=True)
+    schema = TransactionsAdminSchema(many=True)
     return {"data": schema.dump(transactions)}, 200
 
 
@@ -72,7 +72,11 @@ def create_user_transaction_endp(email: str):
     if not "Admin" in caller_roles:
         raise PermissionDenied
 
-    data = request.get_json()
-    schema = TransactionsSchema(session=db.session)
+    schema = TransactionsPublicSchema()
+    try:
+        data = schema.load(request.get_json())
+    except ValidationError as err:
+        return {"errors": err.messages}, 400
+
     transaction = sum_user_transaction_srv(email=email, transaction=data)
-    return {"msg": "Transaction created successfully", "data": schema.dump(transaction)}, 201
+    return {"data": schema.dump(transaction)}, 201

@@ -2,7 +2,7 @@ from flask import Blueprint, request
 from flask_jwt_extended import jwt_required, get_jwt
 
 from ..errors import PermissionDeniedDisabledUser, PermissionDenied
-from ..schemas import BalancesSchema, BalancesAdminSchema
+from ..schemas import BalancesSchema, BalancesUpdateSchema
 from ..services.balances import get_user_balance_by_email_srv, get_balances_srv
 
 balances_bp = Blueprint("balances", __name__, url_prefix='/v1/balances')
@@ -16,11 +16,11 @@ def get_balances_endp():
     if not "Admin" in caller_roles:
         raise PermissionDenied
 
-    min_balance = request.args.get("min_balance")
-    max_balance = request.args.get("max_balance")
+    min_balance = request.args.get("min_balance", type=float)
+    max_balance = request.args.get("max_balance", type=float)
     balances = get_balances_srv(min_balance=min_balance, max_balance=max_balance)
 
-    schema = BalancesAdminSchema(many=True)
+    schema = BalancesUpdateSchema(many=True)
     return {"data": schema.dump(balances)}, 200
 
 
@@ -34,7 +34,7 @@ def get_user_balance_endp(email: str):
 
     balance = get_user_balance_by_email_srv(email=email)
 
-    schema = BalancesAdminSchema()
+    schema = BalancesUpdateSchema()
     return {"data": schema.dump(balance)}, 200
 
 

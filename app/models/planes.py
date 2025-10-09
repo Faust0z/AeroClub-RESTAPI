@@ -10,10 +10,10 @@ class Planes(db.Model):
     category: db.Mapped[str] = db.mapped_column(db.String, nullable=False)
     acquisition_date: db.Mapped[db.Date] = db.mapped_column(db.Date, nullable=False)
     consumption_per_hour: db.Mapped[int] = db.mapped_column(db.Integer, nullable=False)
+    fare: db.Mapped[float] = db.mapped_column(db.Float, nullable=False)
     description: db.Mapped[str] = db.mapped_column(db.Text)
     plane_status_id: db.Mapped[int] = db.mapped_column(db.ForeignKey('plane_status.id'))
 
-    fare: db.Mapped["Fares"] = db.relationship(back_populates="plane")
     itinerary: db.Mapped[list["Itineraries"]] = db.relationship(back_populates="plane")
     plane_status: db.Mapped["PlaneStatus"] = db.relationship(back_populates="plane")
 
@@ -21,4 +21,4 @@ class Planes(db.Model):
         return (f"<Plane "
                 f"id={self.id} "
                 f"model='{self.model}' "
-                f"consumption_per_hour={self.consumption_per_hour}")
+                f"consumption_per_hour={self.consumption_per_hour}>")

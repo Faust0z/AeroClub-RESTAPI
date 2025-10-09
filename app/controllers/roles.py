@@ -1,6 +1,5 @@
-from flask import Blueprint, request
+from flask import Blueprint
 from flask_jwt_extended import jwt_required, get_jwt
-from marshmallow import ValidationError
 
 from app.errors import PermissionDeniedDisabledUser, PermissionDenied
 from app.schemas import RolesSchema
@@ -52,23 +51,22 @@ def get_user_roles_endp(email: str):
     return {"data": schema.dump(roles)}, 200
 
 
-@roles_bp.post("/<string:email>")
+@roles_bp.post("/<string:email>/<string:role>")
 @jwt_required()
-def add_user_role_endp(email: str):
+def add_user_role_endp(email: str, role: str):
     jwt_data = get_jwt()
     caller_roles = jwt_data.get("roles", ["User"])
     if not "Admin" in caller_roles:
         raise PermissionDenied
 
-    data = request.get_json()
     schema = RolesSchema(session=db.session, many=True)
-    roles = add_user_role_srv(email=email, role=data)
+    roles = add_user_role_srv(email=email, role_name=role)
     return {"data": schema.dump(roles)}, 201
 
 
-@roles_bp.delete("/<string:email>")
+@roles_bp.delete("/<string:email>/<string:role>")
 @jwt_required()
-def delete_user_role_endp(email: str):
+def delete_user_role_endp(email: str, role: str):
     """
     By business logic, the User role cannot be revoked
     """
@@ -78,9 +76,5 @@ def delete_user_role_endp(email: str):
         raise PermissionDenied
 
     schema = RolesSchema(session=db.session, many=True)
-    try:
-        data = schema.load(request.get_json())
-    except ValidationError as err:
-        return {"errors": err.messages}, 400
-    roles = del_user_role_srv(email=email, role=data)
-    return {"data": schema.dump(roles)}, 204
+    roles = del_user_role_srv(email=email, role_name=role)
+    return {"data": schema.dump(roles)}, 200

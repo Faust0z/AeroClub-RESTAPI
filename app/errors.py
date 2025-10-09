@@ -5,6 +5,18 @@ from marshmallow import ValidationError as MarshmallowValidationError
 from werkzeug.exceptions import NotFound, BadRequest, Unauthorized, Forbidden, Conflict, HTTPException
 
 
+class AirportCodeAlreadyExists(Conflict):
+    description = "Airport code already exists"
+
+
+class AirportCodeNotFound(NotFound):
+    description = "Airport code not found"
+
+
+class AuthError(Unauthorized):
+    description = "Authentication credentials were not provided or are invalid"
+
+
 class BadAuthRequest(BadRequest):
     description = "Email and password are required"
 
@@ -13,8 +25,36 @@ class BadTimeInput(BadRequest):
     description = "Arrival time is earlier than departure time"
 
 
-class AuthError(Unauthorized):
-    description = "Authentication credentials were not provided or are invalid"
+class BalanceNotFound(NotFound):
+    description = "Balance not found for this user"
+
+
+class EmailAlreadyExists(Conflict):
+    description = "The email given is already registered"
+
+
+class FareTypeAlreadyExists(Conflict):
+    description = "Fare type already exists"
+
+
+class FareTypeNotFound(NotFound):
+    description = "Fare type not found"
+
+
+class FlightSessionNotFound(NotFound):
+    description = "Flight session not found"
+
+
+class ItineraryTypeAlreadyExists(Conflict):
+    description = "Itinerary type already exists"
+
+
+class ItineraryTypeNotFound(NotFound):
+    description = "Itinerary type not found"
+
+
+class PaymentTypeNotFound(NotFound):
+    description = "Payment type not found"
 
 
 class PermissionDenied(Forbidden):
@@ -23,18 +63,6 @@ class PermissionDenied(Forbidden):
 
 class PermissionDeniedDisabledUser(Forbidden):
     description = "User account is disabled"
-
-
-class BalanceNotFound(NotFound):
-    description = "Balance not found for this user"
-
-
-class FlightSessionNotFound(NotFound):
-    description = "Flight session not found"
-
-
-class PaymentTypeNotFound(NotFound):
-    description = "Payment type not found"
 
 
 class PlaneNotFound(NotFound):
@@ -47,14 +75,6 @@ class PlaneStatusNotFound(NotFound):
 
 class PaymentTypeAlreadyExists(Conflict):
     description = "Payment type already exists"
-
-
-class AirportCodeAlreadyExists(Conflict):
-    description = "Airport code already exists"
-
-
-class AirportCodeNotFound(NotFound):
-    description = "Plane status not found"
 
 
 class PlaneFareNotFound(NotFound):
@@ -71,10 +91,6 @@ class PlaneRegistrationAlreadyExists(Conflict):
 
 class ResourceAlreadyExists(Conflict):
     description = "Resource already exists"
-
-
-class EmailAlreadyExists(Conflict):
-    description = "The email given is already registered"
 
 
 class UserNotFound(NotFound):

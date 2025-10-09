@@ -1,7 +1,6 @@
 from datetime import date
 
 from .balances import get_user_balance_by_email_srv
-from .payment_types import get_payment_type_by_name_srv
 from .users import get_user_by_email_srv
 from ..extensions import db
 from ..models import Balances, PaymentTypes, Transactions, Users
@@ -44,9 +43,6 @@ def sum_user_transaction_srv(email: str, transaction: Transactions) -> Transacti
     :param transaction: the transaction to sum
     :return: the transaction with the payment type and user's balance attached
     """
-    payment_type = get_payment_type_by_name_srv(name=transaction.payment_type)
-    transaction.payment_type = payment_type
-
     balance = get_user_balance_by_email_srv(email=email)
     transaction.balance = balance
     balance.balance += transaction.amount
@@ -65,9 +61,6 @@ def sub_user_transaction_srv(email: str, transaction: Transactions) -> Transacti
     :param transaction: the user's transaction
     :return: the transaction with the payment type and user's balance attached
     """
-    payment_type = get_payment_type_by_name_srv(name=transaction.payment_type)
-    transaction.payment_type = payment_type
-
     balance = get_user_balance_by_email_srv(email=email)
     transaction.balance = balance
     balance.balance -= transaction.amount

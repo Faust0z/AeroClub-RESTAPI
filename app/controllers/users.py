@@ -30,10 +30,10 @@ def get_users_endp():
         raise PermissionDenied
 
     # Filters
-    role = request.args.get("role")
     email = request.args.get("email")
     first_name = request.args.get("first_name")
     last_name = request.args.get("last_name")
+    role = request.args.get("role_name")
     users = get_users_srv(
         email=email,
         first_name=first_name,

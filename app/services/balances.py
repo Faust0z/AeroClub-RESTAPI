@@ -4,11 +4,11 @@ from ..errors import BalanceNotFound
 from ..extensions import db
 
 
-def get_balances_srv(min_balance: float | None = None, max_balance: str | None = None) -> list[Balances]:
+def get_balances_srv(min_balance: float | None = None, max_balance: float | None = None) -> list[Balances]:
     stmt = db.select(Balances)
 
     if min_balance and max_balance:
-        stmt.where(db.and_(Balances.balance >= min_balance, Balances.balance <= max_balance))
+        stmt = stmt.where(db.and_(Balances.balance >= min_balance, Balances.balance <= max_balance))
     elif min_balance:
         stmt = stmt.where(Balances.balance >= min_balance)
     elif max_balance:
