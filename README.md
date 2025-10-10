@@ -76,4 +76,4 @@ session.
 
 ### Database diagram
 
-[database_diagram.webp](database_diagram.webp)
+![database_diagram.webp](database_diagram.webp)
