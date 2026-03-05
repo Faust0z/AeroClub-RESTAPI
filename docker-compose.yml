@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: aeroclub
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d aeroclub"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    profiles:
+      - prod
+    environment:
+      - DB_URI=postgresql://user:password@db:5432/aeroclub
+      - SECRET_KEY=secure_key_for_docker
+      - CORS_ORIGINS=*
+      - DEBUG=False
+    ports:
+      - "5000:5000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

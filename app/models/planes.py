@@ -10,7 +10,7 @@ class Planes(db.Model):
     category: db.Mapped[str] = db.mapped_column(db.String, nullable=False)
     acquisition_date: db.Mapped[db.Date] = db.mapped_column(db.Date, nullable=False)
     consumption_per_hour: db.Mapped[int] = db.mapped_column(db.Integer, nullable=False)
-    fare: db.Mapped[float] = db.mapped_column(db.Float, nullable=False)
+    fare: db.Mapped[float] = db.mapped_column(db.Numeric(10, 2), nullable=False)
     description: db.Mapped[str] = db.mapped_column(db.Text)
     plane_status_id: db.Mapped[int] = db.mapped_column(db.ForeignKey('plane_status.id'))
 

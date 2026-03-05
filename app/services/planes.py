@@ -1,4 +1,5 @@
 from sqlalchemy.exc import IntegrityError
+from typing import Optional
 
 from app.models import Planes, PlaneStatus
 from .plane_status import get_plane_status_by_name_srv
@@ -6,8 +7,8 @@ from ..errors import PlaneRegistrationAlreadyExists, PlaneNotFound
 from ..extensions import db
 
 
-def get_planes_srv(brand: str | None = None, registration: str | None = None, category: str | None = None,
-                   status: str | None = None) -> list[Planes]:
+def get_planes_srv(brand: Optional[str] = None, registration: Optional[str] = None, category: Optional[str] = None,
+                   status: Optional[str] = None) -> list[Planes]:
     stmt = db.select(Planes)
 
     if brand:

@@ -1,4 +1,4 @@
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 
 from flask import Flask, request
 from marshmallow import ValidationError as MarshmallowValidationError
@@ -109,7 +109,7 @@ def register_error_handlers(app: Flask) -> None:
             "message": e.description,
             "status": e.code,
             "path": request.path,
-            "timestamp": datetime.now(UTC).isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
         return response, e.code
 
@@ -120,7 +120,7 @@ def register_error_handlers(app: Flask) -> None:
             "message": str(e) or "An unexpected error occurred",
             "status": 500,
             "path": request.path,
-            "timestamp": datetime.now(UTC).isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
         return response, 500
 
@@ -131,6 +131,6 @@ def register_error_handlers(app: Flask) -> None:
             "message": e.messages,
             "status": 400,
             "path": request.path,
-            "timestamp": datetime.now(UTC).isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
         return response, 400

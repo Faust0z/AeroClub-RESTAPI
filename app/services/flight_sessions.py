@@ -1,5 +1,6 @@
 import math
-from datetime import date, datetime, UTC
+from datetime import date, datetime, timezone
+from typing import Optional
 
 from sqlalchemy.orm import joinedload
 
@@ -14,10 +15,10 @@ from ..errors import UserNotFound, BadTimeInput, FlightSessionNotFound
 from ..extensions import db
 
 
-def get_flight_sessions_srv(flight_session_identifier: int | None = None, plane_registration: str | None = None,
-                            admin_email: str | None = None, user_first_name: str | None = None, user_last_name: str | None = None,
-                            observations: str | None = None,
-                            starting_date: date | None = None, limit_date: date | None = None) -> list[FlightSessions]:
+def get_flight_sessions_srv(flight_session_identifier: Optional[int] = None, plane_registration: Optional[str] = None,
+                            admin_email: Optional[str] = None, user_first_name: Optional[str] = None, user_last_name: Optional[str] = None,
+                            observations: Optional[str] = None,
+                            starting_date: Optional[date] = None, limit_date: Optional[date] = None) -> list[FlightSessions]:
     stmt = db.select(FlightSessions)
 
     if flight_session_identifier:
@@ -106,7 +107,7 @@ def create_flight_session_srv(flight_session_data: dict, admin_email: str) -> Fl
             email=user.email,
             transaction=Transactions(
                 amount=total_session_cost,
-                issued_date=datetime.now(UTC),
+                issued_date=datetime.now(timezone.utc),
                 description="Transaction automatically created by flight session",
                 payment_type=get_payment_type_by_name_srv("Flight Session"),
                 balance_id=user.balance.id

@@ -7,7 +7,7 @@ from ..extensions import db
 class Transactions(db.Model):
     __tablename__ = 'transactions'
     id: db.Mapped[int] = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    amount: db.Mapped[float] = db.Column(db.Float, nullable=False)
+    amount: db.Mapped[float] = db.Column(db.Numeric(10, 2), nullable=False)
     issued_date: db.Mapped[date] = db.Column(db.Date, nullable=False)
     description: db.Mapped[str] = db.Column(db.Text, nullable=True)
     payment_type_id = db.Column(db.ForeignKey('payment_types.id'))

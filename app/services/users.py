@@ -1,4 +1,5 @@
-from datetime import date, datetime, UTC
+from datetime import date, datetime, timezone
+from typing import Optional
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
@@ -10,8 +11,8 @@ from ..extensions import db
 from ..models import Users, Roles, Balances
 
 
-def get_users_srv(email: str | None = None, first_name: str | None = None, last_name: str | None = None,
-                  role_name: str | None = None, include_inactive: bool = False) -> list[Users]:
+def get_users_srv(email: Optional[str] = None, first_name: Optional[str] = None, last_name: Optional[str] = None,
+                  role_name: Optional[str] = None, include_inactive: bool = False) -> list[Users]:
     stmt = db.select(Users).options(joinedload(Users.roles))
 
     if email:
@@ -57,7 +58,7 @@ def disable_user_srv(email) -> Users:
     user = get_user_by_email_srv(email)
 
     user.status = False
-    user.disabled_at = datetime.now(UTC)
+    user.disabled_at = datetime.now(timezone.utc)
     db.session.commit()
     return user
 

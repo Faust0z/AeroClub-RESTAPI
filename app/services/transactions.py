@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Optional
 
 from .balances import get_user_balance_by_email_srv
 from .users import get_user_by_email_srv
@@ -6,8 +7,8 @@ from ..extensions import db
 from ..models import Balances, PaymentTypes, Transactions, Users
 
 
-def get_transactions_srv(email: str | None = None, first_name: str | None = None, last_name: str | None = None,
-                         payment_type: str | None = None, starting_date: date | None = None, limit_date: date | None = None) -> \
+def get_transactions_srv(email: Optional[str] = None, first_name: Optional[str] = None, last_name: Optional[str] = None,
+                         payment_type: Optional[str] = None, starting_date: Optional[date] = None, limit_date: Optional[date] = None) -> \
         list[Transactions]:
     stmt = db.select(Transactions)
 
