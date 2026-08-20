@@ -20,7 +20,7 @@ The system automates the financial and operational workflows of an aviation trai
 
 | Layer | Technology |
 | :--- | :--- |
-| Language/Runtime | Python 3.9 (Docker), 3.12+ (local) |
+| Language/Runtime | Python 3.9 (Docker) |
 | Web Framework | Flask (Blueprint-based controllers) |
 | ORM | SQLAlchemy 2.0 |
 | Serialization | Marshmallow 4 |
