@@ -1,136 +1,153 @@
-# Versión Español
-Esta API REST en **_Flask_** fue originalmente un proyecto universitario que ha sido actualizado con las mejores prácticas y nuevas librerías para sumar seguridad, mantenibilidad y funcionalidad. El código se estructuró siguiendo el patrón **Controlador-Servicio-Repositorio** y convenciones de nomenclatura estándar.
+# AeroClub Backend
 
-## Ejecución y configuración
+A RESTful API for managing aviation training center operations. It handles user authentication, role-based access control, financial ledger accounting, and flight session billing. The backend uses a layered Flask architecture with SQLAlchemy ORM, Marshmallow validation, and stateless JWT authentication.
 
-La aplicación puede ser ejecutada desde el archivo `app.py`, donde es posible modificar el puerto y el host. Necesitarás instalar las dependencias usando `pip install -r requirements.txt`. Asegúrate de usar Python <= 3.13 y de configurar las variables en el archivo `.env` (configurar una _secret key_ será suficiente para ejecutar el sistema).
+## Executive Summary
 
-El proyecto cuenta con el archivo  `database_filler.py` ubicado en el directorio raíz para generar datos de relleno y necesarios para que la aplicación corra correctamente. Se recomienda ejecutar este archivo ya que cierta información (como Roles y Tipos de Pago) es obligatoria para muchas peticiones.
+The system automates the financial and operational workflows of an aviation training center. It replaces manual paper-based tracking with a transactional ledger that records member balances, deposits, and flight-session debits. The architecture follows a layered Controller, Service, Model pattern with centralized error handling and schema-based validation.
 
-Se adjunta una colección de Postman con instrucciones para probar la API.
+## Key Architecture Points
 
-## Descripción general del sistema
+- Role-based access control (RBAC) with three cumulative roles: User, Instructor, Admin.
+- Shared decorators for authorization checks: `@active_account_required`, `@admin_required`, `@instructor_required`, `@admin_or_instructor_required`.
+- Controller-to-Service-to-Model layering; services contain business logic and ORM queries.
+- Stateless JWT authentication with 24-hour TTL and role/status claims.
+- Soft deletion for user accounts via `status=False` and `disabled_at`.
+- Financial integrity via single-transaction atomic commits for flight-session billing.
+- Decimal-precise cost calculation using `decimal.Decimal` to avoid floating-point drift.
 
-El sistema modela un **entorno de entrenamiento de Aeroclub** donde los usuarios gestionan sus finanzas y sesiones de vuelo a través de entidades estructuradas como _saldos_, _transacciones_, _sesiones de vuelo_ e _itinerarios_.
+## Technical Stack
 
-### Roles y Permisos
+| Layer | Technology |
+| :--- | :--- |
+| Language/Runtime | Python 3.9 (Docker), 3.12+ (local) |
+| Web Framework | Flask (Blueprint-based controllers) |
+| ORM | SQLAlchemy 2.0 |
+| Serialization | Marshmallow 4 |
+| Authentication | Flask-JWT-Extended (stateless JWT) |
+| Database | PostgreSQL (production), SQLite (local development) |
+| Migrations | Flask-Migrate / Alembic |
+| Containerization | Docker, Docker Compose |
 
-Existen **tres roles de usuario**, cada uno define qué datos y acciones están permitidas:
+## Configuration and Deployment (Quick Start)
 
-|**Rol**|**Descripción**|**Permisos**|
-|---|---|---|
-|**Usuario**|Rol base para todos los miembros registrados.|Puede ver sus propios datos (saldo, transacciones, sesiones de vuelo) y la información general del club (tarifas, aviones, tipos de itinerario, códigos de aeropuerto).|
-|**Instructor**|Usuarios que dirigen los vuelos de instrucción.|Puede ver todos los datos de `Usuario` más información limitada de otros usuarios (alumnos, otros instructores, administradores). Siempre posee tanto el rol de `Usuario` como de `Instructor`.|
-|**Admin**|Gestor del sistema con acceso total.|Puede realizar todas las operaciones CRUD, incluyendo la gestión de usuarios, aviones, tarifas y roles. Siempre posee tanto el rol de `Usuario` como de `Admin`.|
+### Prerequisites
 
-Reglas adicionales:
+- Python 3.9 or 3.12+
+- PostgreSQL (or SQLite for local development)
+- Docker and Docker Compose (optional)
 
-- Toda cuenta incluye siempre, como mínimo, el rol de `Usuario`.
-    
-- Los **usuarios deshabilitados** (`status=False`) no pueden realizar ninguna petición.
-    
-- La desactivación de una cuenta puede tardar en surtir efecto hasta que expire el JWT actual (24 horas después de su emisión).
-    
+### Environment Variables
 
-### Sistema financiero
+Create a `.env` file in the project root:
 
-Cada usuario recibe un **saldo monetario** al registrarse que puede aumentar o disminuir según su actividad en el aeroclub:
+```properties
+DB_URI=postgresql://user:password@localhost:5433/aeroclub
+SECRET_KEY=your_supersecure_secret_key
+CORS_ORIGINS=http://localhost:3000,http://localhost:4200
+DEBUG=True
+```
 
-- Los usuarios pueden **agregar fondos**: transacciones positivas vía Efectivo, Transferencia o Cheque.
-    
-- Los usuarios pueden **pagar sesiones de vuelo**: transacciones negativas que un administrador registra como "Sesión de Vuelo".
-    
-    No existen **límites superiores o inferiores** en el saldo de un usuario — las políticas administrativas manejan los sobregiros o el crédito excesivo de forma manual.
-    
+`DB_URI` and `SECRET_KEY` are required. `CORS_ORIGINS` and `DEBUG` are optional.
 
-### Sesiones de vuelo
+### Local Setup
 
-Una **sesión de vuelo** es la unidad central de entrenamiento del sistema — representa uno o más itinerarios de vuelo realizados entre un **alumno (usuario)** y un **instructor** (opcional).
+```bash
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
-Cada sesión de vuelo:
+# Install dependencies
+pip install -r requirements.txt
 
-- Pertenece a un **Usuario**, es registrada por un Administrador y puede incluir un Instructor.
-    
-- Contiene uno o más **itinerarios**, cada uno describiendo un segmento distinto, el avión utilizado, el tipo de vuelo, el código del aeropuerto de salida y el de aterrizaje para el vuelo de entrenamiento general.
-    
-- Tiene una **fecha de emisión**, **observaciones** y un **costo total de la sesión**.
-    
-- Está vinculada a una **transacción** que refleja el costo de la sesión y actualiza el saldo del usuario.
-    
+# Seed required data (roles, payment types, airport codes, plane status, demo users)
+python database_filler.py
 
-Los tiempos de vuelo se registran en incrementos de 0.1h (6 minutos).
+# Run the application
+python app.py
+```
 
-El costo de la sesión se calcula sumando la: `tarifa del avión * duración del itinerario` de cada itinerario registrado en la sesión.
+The API listens on `http://localhost:5000` by default.
 
-### Diagrama de la base de datos
+### Docker
 
-![database_diagram.webp](database_diagram.webp)
+```bash
+# Start PostgreSQL
+docker compose up db
 
-# English Version
-This ***Flask*** REST API was originally a college project that was brought up to date with current best practices and new
-libraries to add security + maintainability + functionality. The code was structured to follow a **Controller-Service-Repository**
-pattern and naming conventions.
+# Start the full stack (API behind the "prod" profile)
+docker compose --profile prod up --build
+```
 
-## Run and configure
+## Domain Logic and Security
 
-You can run the app from the ``app.py`` file, where you can change the port and host. You'll need to install the libraries
-using `pip install -r requirements.txt`. Make sure to use Python <= 3.13 and to configure the variables in the `.env` file (
-setting up a secret key will be enough to run the system).
+### RBAC Model
 
-You can insert into the database all the necessary payment types, airport codes, roles, users, and more to run the Postman
-examples
-running the `database_filler.py` file in the root folder. This will populate the database with example data to play around.
-Some data, like Roles and PaymentTypes is mandatory for many requests, so running the file is adviced.
+Permissions are cumulative. Higher roles inherit all permissions of lower roles.
 
-There's an attached Postman collection for instructions to test the API.
+| Role | Scope |
+| :--- | :--- |
+| User | Own profile, balance, transactions, and flight sessions. Read-only access to lookup data (planes, airport codes, payment types, etc.). |
+| Instructor | Inherits User. Read access to other users via `UsersInstructorSchema`. |
+| Admin | Inherits User. Full CRUD on users, planes, roles, transactions, and flight sessions. |
 
-## System overview
+Authorization is enforced through shared decorators applied at the controller level. Protected endpoints require a valid JWT and specific role claims.
 
-The system models an **Aero Club training environment** where users manage their finances and flight sessions through structured
-entities such as _balances_, _transactions_, _flight sessions_, and _itineraries_.
+### Flight Session Billing
 
-### Roles and Permissions
+When a flight session is created, the system:
 
-There are **three user roles**, each defining what data and actions are allowed:
+1. Builds the `FlightSessions` record and associated `Itineraries`.
+2. Calculates each itinerary cost using `0.1h` (6-minute) billing blocks rounded up.
+3. Creates a debit `Transaction` bound to the student's balance.
+4. Commits the session and transaction in a single database operation.
 
-| Role           | Description                           | Permissions                                                                                                                                               |
-|----------------|---------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **User**       | Base role for all registered members. | Can view their own data (balance, transactions, flight sessions) and general club information (fares, planes, itinerary types, airport codes).            |
-| **Instructor** | Users who conduct training flights.   | Can view all `User` data plus limited information about other users (students, other instructors, admins). Always has both `User` and `Instructor` roles. |
-| **Admin**      | Full-access system manager.           | Can perform all CRUD operations, including managing users, planes, fares, and roles. Always has both `User` and `Admin` roles.                            |
+If any step fails, the entire operation rolls back. This guarantees that no flight session exists without a corresponding ledger entry.
 
-Additional rules:
+### User Lifecycle
 
-- Every account always includes the `User` role at minimum.
-- **Disabled users** (`status=False`) cannot perform any requests.
-- Account deactivation might take effect only after the current JWT expires (24 hours after issued).
+- Registration creates a `User` role and a zeroed `Balances` row.
+- The `User` role cannot be revoked.
+- Accounts are soft-deactivated by setting `status=False` and populating `disabled_at`.
+- Disabled accounts are blocked by the `@active_account_required` decorator reading the `status` claim from the JWT.
 
-### Financial system
+### Cost Calculation
 
-Each user receives a **monetary balance** upon registration that can increase or decrease based on their activity in the Aero
-club:
+Flight hours are billed in 6-minute increments matching aviation logbook conventions:
 
-- Users can **add funds**: positive transactions via Cash, Transfer or Check.
-- Users can **pay for flight sessions**: negative transactions that are registered by an admin as "Flight Session".
-  There are **no upper or lower limits** on a user’s balance — administrative policies handle overdrafts or excessive credit
-  manually.
+```python
+blocks = ceil(elapsed_seconds / (3600 * 0.1))
+billed_hours = blocks * 0.1
+itinerary_cost = billed_hours * plane.fare
+```
 
-### Flight Sessions
+Costs are computed with `decimal.Decimal` and quantized to two decimal places using `ROUND_HALF_UP`.
 
-A **flight session** is the core training unit of the system — it represents one or more flight itineraries conducted between a *
-*student (user)** and an **instructor** (optional).
-Each flight session:
+## Architecture Decisions and Limitations (Trade-offs)
 
-- Belongs to one **User**, it's registered by an Admin and can include an Instructor.
-- Contains one or more **itineraries**, each describing a distinct segment, used plane, flight type, departing airport code and
-  landing airport code of the overall training flight.
-- Has an **issued date**, **observations**, and a **total session cost**.
-- Is linked to a **transaction** that reflects the session’s cost and updates the user’s balance.
+### Stateless JWT
 
-Flight times are recorded in 0.1h increments (6 minutes).
-The cost of the session is calculated by adding together the: `plane fare * itinerary lenght` of each itinerary registered in the
-session.
+The API uses stateless JWTs with embedded role and status claims. This eliminates the need for a server-side session store and simplifies horizontal scaling. The trade-off is delayed revocation: a user disabled after login retains access for up to 24 hours, until the token expires. There is no token blacklist or revocation store.
 
-### Database diagram
+### Controller-Level Authorization
 
-![database_diagram.webp](database_diagram.webp)
+Authorization checks are centralized in decorators rather than duplicated inline in each controller. This reduces drift and makes the permission model easier to audit. The `@admin_or_instructor_required` decorator handles endpoints accessible to both Admin and Instructor roles.
+
+### No Balance Limits
+
+The system does not enforce upper or lower balance limits. Overdrafts and excessive credit are managed by administrative policy rather than enforced by the software.
+
+### Soft Delete Only
+
+Users are deactivated, not hard-deleted. There is no endpoint to permanently remove user records.
+
+### Schema Layer
+
+Marshmallow schemas handle input validation and output serialization. Separate schemas exist for different roles (e.g., `UsersAdminSchema`, `UsersInstructorSchema`, `UsersSchema`) to enforce field-level access control in the response layer.
+
+### Current Limitations
+
+- No automated test suite or CI pipeline.
+- No OpenAPI/Swagger specification; Postman is the primary API contract.
+- Some controllers referenced in `app/__init__.py` (planes, flight_sessions, airport_codes, payment_types, itinerary_types, plane_status) are registered as Blueprints but their implementation files are not present in the current repository state.
+- Python version inconsistency: the Dockerfile pins `python:3.9-alpine` while local development uses Python 3.12+.

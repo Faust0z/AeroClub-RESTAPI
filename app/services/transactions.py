@@ -37,13 +37,11 @@ def get_user_trans_by_email_srv(email: str) -> list[Transactions]:
     return user.balance.transactions
 
 
-def sum_user_transaction_srv(email: str, transaction: Transactions) -> Transactions:
+def sum_user_transaction_srv(email: str, data: dict) -> Transactions:
     """
-    These kind of transactions are only to add money to the user's balance
-    :param email: user's email
-    :param transaction: the transaction to sum
-    :return: the transaction with the payment type and user's balance attached
+    Adds money to the user's balance from an uncommitted transaction payload.
     """
+    transaction = Transactions(**data)
     balance = get_user_balance_by_email_srv(email=email)
     transaction.balance = balance
     balance.balance += transaction.amount

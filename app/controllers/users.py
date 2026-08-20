@@ -1,78 +1,59 @@
 from datetime import timedelta
 
 from flask import Blueprint, request
-from flask_jwt_extended import get_jwt, create_access_token, jwt_required
+from flask_jwt_extended import get_jwt, create_access_token
 from marshmallow import ValidationError
 
+from ..decorators import active_account_required, admin_required
 from ..errors import PermissionDenied, BadAuthRequest, PermissionDeniedDisabledUser
-from ..extensions import db
-from ..schemas import UsersRegisterSchema, UsersSchema, UsersAdminSchema, UsersInstructorSchema, UsersUpdateSchema, \
-    UsersAdminUpdateSchema
-from ..services.users import get_users_srv, register_user_srv, update_user_srv, disable_user_srv, authenticate_user_srv, \
-    get_user_by_email_srv
+from ..schemas import (
+    UsersRegisterSchema, UsersSchema, UsersAdminSchema, UsersInstructorSchema,
+    UsersUpdateSchema, UsersAdminUpdateSchema,
+)
+from ..services.users import (
+    get_users_srv, register_user_srv, update_user_srv, disable_user_srv,
+    authenticate_user_srv, get_user_by_email_srv,
+)
 
-users_bp = Blueprint("users", __name__, url_prefix='/v1/users')
+users_bp = Blueprint("users", __name__, url_prefix="/v1/users")
 
 
 @users_bp.get("/")
-@jwt_required()
+@active_account_required
+@admin_or_instructor_required
 def get_users_endp():
-    jwt_data = get_jwt()
-    if not jwt_data.get("status", True):
-        raise PermissionDeniedDisabledUser
-
-    caller_roles = jwt_data.get("roles", ["User"])
+    caller_roles = get_jwt().get("roles", ["User"])
     if "Admin" in caller_roles:
         schema = UsersAdminSchema(many=True)
-    elif "Instructor" in caller_roles:
-        schema = UsersInstructorSchema(many=True)
     else:
-        raise PermissionDenied
+        schema = UsersInstructorSchema(many=True)
 
-    # Filters
     email = request.args.get("email")
     first_name = request.args.get("first_name")
     last_name = request.args.get("last_name")
     role = request.args.get("role_name")
-    users = get_users_srv(
-        email=email,
-        first_name=first_name,
-        last_name=last_name,
-        role_name=role
-    )
+    users = get_users_srv(email=email, first_name=first_name, last_name=last_name, role_name=role)
 
     return {"data": schema.dump(users)}, 200
 
 
 @users_bp.get("/me")
-@jwt_required()
+@active_account_required
 def get_my_info_endp():
-    jwt_data = get_jwt()
-    if not jwt_data.get("status", True):
-        raise PermissionDeniedDisabledUser
-
-    user_email = jwt_data["sub"]
-
-    user = get_user_by_email_srv(user_email)
-
+    user = get_user_by_email_srv(get_jwt()["sub"])
     schema = UsersSchema()
     return {"data": schema.dump(user)}, 200
 
 
 @users_bp.get("/<string:email>")
-@jwt_required()
+@active_account_required
+@admin_or_instructor_required
 def get_user_by_email_endp(email: str):
-    jwt_data = get_jwt()
-    if not jwt_data.get("status", True):
-        raise PermissionDeniedDisabledUser
-
-    caller_roles = jwt_data.get("roles", ["User"])
+    caller_roles = get_jwt().get("roles", ["User"])
     if "Admin" in caller_roles:
         schema = UsersAdminSchema()
-    elif "Instructor" in caller_roles:
-        schema = UsersInstructorSchema()
     else:
-        raise PermissionDenied
+        schema = UsersInstructorSchema()
 
     user = get_user_by_email_srv(email=email)
 
@@ -80,15 +61,10 @@ def get_user_by_email_endp(email: str):
 
 
 @users_bp.patch("/<string:email>")
-@jwt_required()
+@active_account_required
 def update_user_endp(email: str):
-    jwt_data = get_jwt()
-    if not jwt_data.get("status", True):
-        raise PermissionDeniedDisabledUser
-
-    user_email = jwt_data["sub"]
-    caller_roles = jwt_data.get("roles", ["User"])
-    if "Admin" in caller_roles:
+    user_email = get_jwt()["sub"]
+    if "Admin" in get_jwt().get("roles", []):
         schema = UsersAdminUpdateSchema(partial=True)
     elif user_email == email:
         schema = UsersUpdateSchema(partial=True)
@@ -105,13 +81,8 @@ def update_user_endp(email: str):
 
 
 @users_bp.delete("/<string:email>")
-@jwt_required()
+@admin_required
 def delete_user_endp(email: str):
-    jwt_data = get_jwt()
-    caller_roles = jwt_data.get("roles", ["User"])
-    if not "Admin" in caller_roles:
-        raise PermissionDenied
-
     user = disable_user_srv(email=email)
 
     schema = UsersAdminSchema()
@@ -120,13 +91,13 @@ def delete_user_endp(email: str):
 
 @users_bp.post("/register")
 def register_user_endp():
-    schema = UsersRegisterSchema(session=db.session)
+    schema = UsersRegisterSchema()
     try:
         data = schema.load(request.get_json())
     except ValidationError as err:
         return {"errors": err.messages}, 400
 
-    user = register_user_srv(user=data)
+    user = register_user_srv(data=data)
     return {"data": schema.dump(user)}, 201
 
 

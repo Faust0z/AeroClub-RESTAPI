@@ -1,5 +1,5 @@
-import math
 from datetime import date, datetime, timezone
+from decimal import ROUND_CEILING, ROUND_HALF_UP, Decimal
 from typing import Optional
 
 from sqlalchemy.orm import joinedload
@@ -96,7 +96,7 @@ def create_flight_session_srv(flight_session_data: dict, admin_email: str) -> Fl
     new_flight_session.users.append(user)
     new_flight_session.users.append(admin)
 
-    total_session_cost = 0
+    total_session_cost = Decimal("0")
     for itinerary_data in flight_session_data["itineraries"]:
         new_itinerary, itinerary_cost = __build_itinerary(itinerary_data)
         new_flight_session.itineraries.append(new_itinerary)
@@ -124,7 +124,7 @@ def create_flight_session_srv(flight_session_data: dict, admin_email: str) -> Fl
     return new_flight_session
 
 
-def __build_itinerary(itinerary_data: dict) -> tuple[Itineraries, float]:
+def __build_itinerary(itinerary_data: dict) -> tuple[Itineraries, Decimal]:
     plane = get_plane_by_registration_srv(registration=itinerary_data["plane_registration"])
     itinerary_type = get_itinerary_type_by_type_srv(type=itinerary_data["itinerary_type"])
 
@@ -149,14 +149,16 @@ def __build_itinerary(itinerary_data: dict) -> tuple[Itineraries, float]:
     )
 
 
-def __calculate_itinerary_cost(departure_time: datetime, arrival_time: datetime, plane: Planes) -> float:
+def __calculate_itinerary_cost(departure_time: datetime, arrival_time: datetime, plane: Planes) -> Decimal:
     if departure_time >= arrival_time:
         raise BadTimeInput
 
-    diff_hours = (arrival_time - departure_time).total_seconds() / 3600
-    minutes_fraction, whole_hours = math.modf(diff_hours)
-    cost = whole_hours
+    delta = arrival_time - departure_time
+    elapsed_seconds = Decimal(delta.days * 86400 + delta.seconds) + Decimal(delta.microseconds) / Decimal(1_000_000)
 
-    # Business rule: every 6 minutes → 0.1h
-    cost += min(math.ceil((minutes_fraction * 60) / 6) * 0.1, 1.0)
-    return cost * plane.fare
+    # Business rule: round up to the nearest 0.1h (6-minute) block
+    blocks = (elapsed_seconds / Decimal(3600) / Decimal("0.1")).to_integral_value(rounding=ROUND_CEILING)
+    billed_hours = blocks * Decimal("0.1")
+
+    cost = billed_hours * Decimal(plane.fare)
+    return cost.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)

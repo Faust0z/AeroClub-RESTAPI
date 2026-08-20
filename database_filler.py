@@ -207,11 +207,11 @@ if __name__ == "__main__":
     app = create_app()
 
     with app.app_context():
-        # create_airport_codes(10)
-        # create_payment_types()
-        # create_roles()
-        # create_postman_users()
-        # create_plane_status()
-        # create_planes()
+        create_airport_codes()
+        create_payment_types()
+        create_roles()
+        create_postman_users()
+        create_plane_status()
+        create_planes()
         create_itinerary_types()
-        # create_random_users(20)  # adjust number as needed
+        create_random_users(20)  # adjust number as needed

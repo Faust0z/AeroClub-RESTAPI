@@ -30,7 +30,8 @@ def get_plane_by_registration_srv(registration: str) -> Planes:
     return plane
 
 
-def create_plane_srv(plane: Planes) -> Planes:
+def create_plane_srv(data: dict) -> Planes:
+    plane = Planes(**data)
     plane.plane_status = get_plane_status_by_name_srv("Active")
 
     try:

@@ -63,7 +63,8 @@ def disable_user_srv(email) -> Users:
     return user
 
 
-def register_user_srv(user: Users) -> Users:
+def register_user_srv(data: dict) -> Users:
+    user = Users(**data)
     user.password = generate_password_hash(user.password)
     user.created_at = date.today()
     user.roles = get_role_by_name_srv("User")

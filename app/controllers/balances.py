@@ -1,21 +1,16 @@
 from flask import Blueprint, request
-from flask_jwt_extended import jwt_required, get_jwt
+from flask_jwt_extended import get_jwt
 
-from ..errors import PermissionDeniedDisabledUser, PermissionDenied
+from ..decorators import active_account_required, admin_required
 from ..schemas import BalancesSchema, BalancesUpdateSchema
 from ..services.balances import get_user_balance_by_email_srv, get_balances_srv
 
-balances_bp = Blueprint("balances", __name__, url_prefix='/v1/balances')
+balances_bp = Blueprint("balances", __name__, url_prefix="/v1/balances")
 
 
 @balances_bp.get("/")
-@jwt_required()
+@admin_required
 def get_balances_endp():
-    jwt_data = get_jwt()
-    caller_roles = jwt_data.get("roles", ["User"])
-    if not "Admin" in caller_roles:
-        raise PermissionDenied
-
     min_balance = request.args.get("min_balance", type=float)
     max_balance = request.args.get("max_balance", type=float)
     balances = get_balances_srv(min_balance=min_balance, max_balance=max_balance)
@@ -25,13 +20,8 @@ def get_balances_endp():
 
 
 @balances_bp.get("/<string:email>")
-@jwt_required()
+@admin_required
 def get_user_balance_endp(email: str):
-    jwt_data = get_jwt()
-    caller_roles = jwt_data.get("roles", ["User"])
-    if not "Admin" in caller_roles:
-        raise PermissionDenied
-
     balance = get_user_balance_by_email_srv(email=email)
 
     schema = BalancesUpdateSchema()
@@ -39,14 +29,9 @@ def get_user_balance_endp(email: str):
 
 
 @balances_bp.get("/me")
-@jwt_required()
+@active_account_required
 def get_my_balance_endp():
-    jwt_data = get_jwt()
-    if not jwt_data.get("status", True):
-        raise PermissionDeniedDisabledUser
-
-    user_email = jwt_data["sub"]
-    balance = get_user_balance_by_email_srv(email=user_email)
+    balance = get_user_balance_by_email_srv(email=get_jwt()["sub"])
 
     schema = BalancesSchema()
     return {"data": schema.dump(balance)}, 200
