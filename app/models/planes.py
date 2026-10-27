@@ -1,21 +1,26 @@
-from ..extensions import db
+from datetime import date
+
+from sqlalchemy import Date, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from ..database import Base
 
 
-class Planes(db.Model):
+class Planes(Base):
     __tablename__ = 'planes'
-    id: db.Mapped[int] = db.mapped_column(db.Integer, primary_key=True, unique=True, autoincrement=True)
-    brand: db.Mapped[str] = db.mapped_column(db.String, nullable=False)
-    model: db.Mapped[str] = db.mapped_column(db.String, nullable=False)
-    registration: db.Mapped[str] = db.mapped_column(db.String, nullable=False, unique=True)
-    category: db.Mapped[str] = db.mapped_column(db.String, nullable=False)
-    acquisition_date: db.Mapped[db.Date] = db.mapped_column(db.Date, nullable=False)
-    consumption_per_hour: db.Mapped[int] = db.mapped_column(db.Integer, nullable=False)
-    fare: db.Mapped[float] = db.mapped_column(db.Numeric(10, 2), nullable=False)
-    description: db.Mapped[str] = db.mapped_column(db.Text)
-    plane_status_id: db.Mapped[int] = db.mapped_column(db.ForeignKey('plane_status.id'))
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, unique=True, autoincrement=True)
+    brand: Mapped[str] = mapped_column(String, nullable=False)
+    model: Mapped[str] = mapped_column(String, nullable=False)
+    registration: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    category: Mapped[str] = mapped_column(String, nullable=False)
+    acquisition_date: Mapped[date] = mapped_column(Date, nullable=False)
+    consumption_per_hour: Mapped[int] = mapped_column(Integer, nullable=False)
+    fare: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    description: Mapped[str] = mapped_column(Text)
+    plane_status_id: Mapped[int] = mapped_column(ForeignKey('plane_status.id'))
 
-    itinerary: db.Mapped[list["Itineraries"]] = db.relationship(back_populates="plane")
-    plane_status: db.Mapped["PlaneStatus"] = db.relationship(back_populates="plane")
+    itinerary: Mapped[list["Itineraries"]] = relationship(back_populates="plane")
+    plane_status: Mapped["PlaneStatus"] = relationship(back_populates="plane")
 
     def __repr__(self):
         return (f"<Plane "

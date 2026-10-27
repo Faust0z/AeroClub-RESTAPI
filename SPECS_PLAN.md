@@ -250,25 +250,63 @@ Run via `uvicorn main:app --reload` (or `python main.py`).
 - `docker-compose.yml`: api port `8000:8000`, env vars unchanged (`DB_URI`, `SECRET_KEY`, `CORS_ORIGINS`, `DEBUG`).
 - `README.md`: update stack table (FastAPI, Pydantic, PyJWT, uvicorn), local setup (`pip install -r requirements.txt`, `uvicorn main:app`), port 8000.
 
-## 15. Migration sequence (incremental)
+## 15. Migration sequence (complete)
 
-1. Add new deps to `requirements.txt`; create `app/database.py`, `app/config/settings.py`, `app/dependencies.py`.
-2. Create `app/auth/` (tokens + dependencies).
-3. Rewrite `app/schemas/` to Pydantic (all 10 resources).
-4. Adapt `app/models/` base to `DeclarativeBase`; verify no Flask-SQLAlchemy imports.
-5. Migrate `app/services/` signatures to accept `db: Session`.
-6. Write `app/routers/` one resource at a time (start with `users`, `roles`, `balances`, `transactions`, then the 6 new ones).
-7. Write `app/main.py` registering all routers + CORS.
-8. Adapt `database_filler.py`.
-9. Delete `app/__init__.py` factory, `app/extensions.py`, `app/decorators.py`, `app/errors.py` (Flask-specific); keep `app.py` replaced by `main.py`.
-10. Update `Dockerfile`, `docker-compose.yml`, `README.md`, `requirements.txt`.
-11. Verify importability: `python -c "import app.main"`; alembic check.
+11. Verify importability: `python -c "import app.main"`; alembic check. — DONE
 
 ## 16. Sign-off criteria
 
-- [ ] All 10 resources have routers mounted under `/v1/`.
-- [ ] No `flask`, `flask_sqlalchemy`, `marshmallow`, `flask_jwt_extended` imports remain in `app/`.
-- [ ] `uvicorn main:app` starts and responds on `/docs` and `/openapi.json`.
-- [ ] All existing service business logic (cost calc, atomic billing, RBAC, soft-delete) preserved.
-- [ ] `database_filler.py` runs and seeds successfully.
-- [ ] `requirements.txt` installs cleanly in the Dockerfile build.
+- [x] All 10 resources have routers mounted under `/v1/`.
+- [x] No `flask`, `flask_sqlalchemy`, `marshmallow`, `flask_jwt_extended` imports remain in `app/`.
+- [x] `uvicorn main:app` starts and responds on `/docs` and `/openapi.json`.
+- [x] All existing service business logic (cost calc, atomic billing, RBAC, soft-delete) preserved.
+- [x] `database_filler.py` runs and seeds successfully.
+- [x] `requirements.txt` installs cleanly in the Dockerfile build.
+
+---
+
+## 17. Testing & Quality (next phase)
+
+### 17.1 Unit Tests
+- Framework: pytest + `httpx`/TestClient
+- Coverage target: >=80% for services + routers
+- Test modules:
+  - `tests/test_auth.py` — token creation, decoding, expiry, role deps
+  - `tests/test_users.py` — CRUD, register, login, RBAC edge cases
+  - `tests/test_flight_sessions.py` — cost calculation, atomic billing, time validation
+  - `tests/test_services/*.py` — service logic with mocked DB session
+
+### 17.2 Contract / API Tests
+- Schema validation: every endpoint returns 200/201 with correct Pydantic shape
+- Error contracts: 400/401/403/404/409 shapes match `HTTPException` detail
+- OpenAPI spec: `/openapi.json` matches implemented endpoints exactly
+- Postman collection auto-generated from OpenAPI for regression
+
+### 17.3 Integration Tests
+- Full auth flow: register -> login -> access protected endpoint
+- RBAC matrix: Admin/Instructor/User permissions per endpoint
+- Flight session billing: create session -> verify transaction + balance debit atomicity
+- Soft-delete: disable user -> verify token still works until expiry, then 403
+
+### 17.4 CI Pipeline
+- GitHub Actions / GitLab CI:
+  - Lint: ruff (or flake8 + black)
+  - Type-check: mypy (strict mode for new code)
+  - Tests: pytest with coverage report
+  - Build: Docker image builds and runs
+  - Security: pip-audit / bandit
+
+### 17.5 Code Quality
+- Pre-commit hooks: ruff, black, mypy
+- Dependencies: `pip-audit` in CI, `pip-tools` for lock file
+- Documentation: update `docs/` ADRs for FastAPI decisions
+- `pyproject.toml` for unified tool config
+
+### 17.6 Observability (ops)
+- Structured JSON logging (request ID, latency, user)
+- Health endpoint: `/health` with DB connectivity check
+- Prometheus `/metrics` (optional)
+
+---
+
+*Migration phase: COMPLETE. Ready for Testing & Quality implementation.*

@@ -1,20 +1,22 @@
-from marshmallow import fields
-from .base import BaseSchema
+from typing import List, Optional
+
+from pydantic import BaseModel, ConfigDict
 
 
-class AirportCodesSchema(BaseSchema):
-    code = fields.Str(required=True)
+class AirportCodesBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    code: str
 
 
-class AirportCodesCreateSchema(BaseSchema):
-    code = fields.Str(required=True)
+class AirportCodesOut(AirportCodesBase):
+    id: Optional[int] = None
 
 
-class AirportCodesUpdateSchema(BaseSchema):
-    id = fields.Int(dump_only=True)
-    code = fields.Str(required=True)
-    itineraries = fields.Nested("ItinerariesSchema", many=True, dump_only=True)
+class AirportCodesCreate(BaseModel):
+    code: str
 
 
-class AirportCodesWithItinerariesSchema(AirportCodesSchema):
-    itineraries = fields.Nested("ItinerariesSchema", many=True, exclude=("airport_codes",))
+class AirportCodesUpdate(BaseModel):
+    id: Optional[int] = None
+    code: str

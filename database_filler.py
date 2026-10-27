@@ -1,107 +1,107 @@
 import random
 
 from faker import Faker
-from werkzeug.security import generate_password_hash
 
-from app import create_app
-from app.extensions import db
+from app.auth.dependencies import get_password_hash
+from app.database import get_db_context
 from app.models import Roles, Users, Planes, PlaneStatus, PaymentTypes, Balances, AirportCodes, ItineraryTypes
+from sqlalchemy import select
 
 fake = Faker()
 
 
-def create_roles():
-    db.session.add(Roles(name="User"))
-    db.session.add(Roles(name="Instructor"))
-    db.session.add(Roles(name="Admin"))
-    db.session.commit()
+def create_roles(db):
+    db.add(Roles(name="User"))
+    db.add(Roles(name="Instructor"))
+    db.add(Roles(name="Admin"))
+    db.commit()
     print(f"Added User, Instructor and Admin roles to the database.")
 
 
-def create_airport_codes():
+def create_airport_codes(db):
     for n in range(8):
-        db.session.add(AirportCodes(code=f"A{n}{n + 1}"))
-    db.session.commit()
+        db.add(AirportCodes(code=f"A{n}{n + 1}"))
+    db.commit()
     print(f"Airport codes created.")
 
 
-def create_payment_types():
-    db.session.add(PaymentTypes(type="Check"))
-    db.session.add(PaymentTypes(type="Cash"))
-    db.session.add(PaymentTypes(type="Transfer"))
-    db.session.add(PaymentTypes(type="Flight Session"))
+def create_payment_types(db):
+    db.add(PaymentTypes(type="Check"))
+    db.add(PaymentTypes(type="Cash"))
+    db.add(PaymentTypes(type="Transfer"))
+    db.add(PaymentTypes(type="Flight Session"))
     print(f"Added payment types: Check, Cash, Transfer and Flight Session to the database.")
 
 
-def create_plane_status():
-    db.session.add(PlaneStatus(state="Active"))
-    db.session.add(PlaneStatus(state="Under maintenance"))
-    db.session.add(PlaneStatus(state="Disabled"))
-    db.session.add(PlaneStatus(state="Out of service"))
-    db.session.commit()
+def create_plane_status(db):
+    db.add(PlaneStatus(state="Active"))
+    db.add(PlaneStatus(state="Under maintenance"))
+    db.add(PlaneStatus(state="Disabled"))
+    db.add(PlaneStatus(state="Out of service"))
+    db.commit()
     print(f"Added plane status: Active, In maintenance, Disabled and Out of service to the database.")
 
 
-def create_postman_users():
-    user_role = db.session.scalar(db.select(Roles).where(Roles.name == "User"))
-    instructor_role = db.session.scalar(db.select(Roles).where(Roles.name == "Instructor"))
-    admin_role = db.session.scalar(db.select(Roles).where(Roles.name == "Admin"))
+def create_postman_users(db):
+    user_role = db.execute(select(Roles).where(Roles.name == "User")).scalar_one()
+    instructor_role = db.execute(select(Roles).where(Roles.name == "Instructor")).scalar_one()
+    admin_role = db.execute(select(Roles).where(Roles.name == "Admin")).scalar_one()
     user = Users(
         first_name=fake.first_name(),
         last_name=fake.last_name(),
         email="postman_user@email.com",
-        password=generate_password_hash("postman_password"),
+        password=get_password_hash("postman_password"),
         phone_number=fake.phone_number(),
         created_at=fake.date_between(start_date='-2y', end_date='today'),
         status=True,
         roles=[user_role]
     )
     user.balance = Balances(balance=0, user_id=user.id)
-    db.session.add(user)
+    db.add(user)
 
     instructor = Users(
         first_name=fake.first_name(),
         last_name=fake.last_name(),
         email="postman_instructor@email.com",
-        password=generate_password_hash("postman_password"),
+        password=get_password_hash("postman_password"),
         phone_number=fake.phone_number(),
         created_at=fake.date_between(start_date='-2y', end_date='today'),
         status=True,
         roles=[instructor_role, user_role]
     )
-    instructor.balance = Balances(balance=0, user_id=user.id)
-    db.session.add(instructor)
+    instructor.balance = Balances(balance=0, user_id=instructor.id)
+    db.add(instructor)
 
     admin = Users(
         first_name=fake.first_name(),
         last_name=fake.last_name(),
         email="postman_admin@email.com",
-        password=generate_password_hash("postman_password"),
+        password=get_password_hash("postman_password"),
         phone_number=fake.phone_number(),
         created_at=fake.date_between(start_date='-2y', end_date='today'),
         status=True,
         roles=[user_role, admin_role]
     )
-    admin.balance = Balances(balance=0, user_id=user.id)
-    db.session.add(admin)
+    admin.balance = Balances(balance=0, user_id=admin.id)
+    db.add(admin)
 
-    db.session.commit()
+    db.commit()
     print(f"Added postman ready example users to the database with the emails: "
           f"postman_user@email.com, "
           f"postman_instructor@email.com and "
           f"postman_admin@email.com.")
 
 
-def create_random_users(amount: int):
-    roles = db.session.query(Roles).all()
-    user_role = db.session.scalar(db.select(Roles).where(Roles.name == "User"))
+def create_random_users(db, amount: int):
+    roles = db.execute(select(Roles)).scalars().all()
+    user_role = db.execute(select(Roles).where(Roles.name == "User")).scalar_one()
 
     for _ in range(amount):
         user = Users(
             first_name=fake.first_name(),
             last_name=fake.last_name(),
             email=fake.unique.email(),
-            password=generate_password_hash("password123"),
+            password=get_password_hash("password123"),
             phone_number=fake.phone_number(),
             created_at=fake.date_between(start_date='-2y', end_date='today'),
             disabled_at=None,
@@ -109,19 +109,18 @@ def create_random_users(amount: int):
             status=True,
             roles=[random.choice(roles)]
         )
-        if not "User" in user.roles:
+        if not "User" in [r.name for r in user.roles]:
             user.roles.append(user_role)
 
         user.balance = Balances(balance=0, user_id=user.id)
+        db.add(user)
 
-        db.session.add(user)
-
-    db.session.commit()
+    db.commit()
     print(f"Added {amount} random users to the database.")
 
 
-def create_planes():
-    plane_status = db.session.query(PlaneStatus).all()
+def create_planes(db):
+    plane_status = db.execute(select(PlaneStatus)).scalars().all()
     sample_planes = [
         {
             "brand": "Cessna",
@@ -171,7 +170,7 @@ def create_planes():
     ]
 
     for plane in sample_planes:
-        db.session.add(
+        db.add(
             Planes(
                 brand=plane["brand"],
                 model=plane["model"],
@@ -185,11 +184,11 @@ def create_planes():
             )
         )
 
-    db.session.commit()
+    db.commit()
     print(f"Added {len(sample_planes)} planes to the database.")
 
 
-def create_itinerary_types():
+def create_itinerary_types(db):
     itinerary_types = [
         ItineraryTypes(type="Solo flight"),
         ItineraryTypes(type="Dual flight"),
@@ -198,20 +197,18 @@ def create_itinerary_types():
         ItineraryTypes(type="Night flight"),
     ]
 
-    db.session.add_all(itinerary_types)
-    db.session.commit()
+    db.add_all(itinerary_types)
+    db.commit()
     print("Added itinerary types: Solo, Dual, Cross-country, Instrument hood, Night.")
 
 
 if __name__ == "__main__":
-    app = create_app()
-
-    with app.app_context():
-        create_airport_codes()
-        create_payment_types()
-        create_roles()
-        create_postman_users()
-        create_plane_status()
-        create_planes()
-        create_itinerary_types()
-        create_random_users(20)  # adjust number as needed
+    with get_db_context() as db:
+        create_airport_codes(db)
+        create_payment_types(db)
+        create_roles(db)
+        create_postman_users(db)
+        create_plane_status(db)
+        create_planes(db)
+        create_itinerary_types(db)
+        create_random_users(db, 20)

@@ -1,24 +1,31 @@
-from marshmallow import fields
-from .base import BaseSchema
-from ..services.payment_types import get_payment_type_by_name_srv
+from datetime import date
+from decimal import Decimal
+from typing import List, Optional
+
+from pydantic import BaseModel, ConfigDict
 
 
-class TransactionsBaseSchema(BaseSchema):
-    amount = fields.Decimal(required=True, as_string=True)
-    issued_date = fields.Date(required=True)
-    description = fields.Str(allow_none=True)
+class TransactionsBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    amount: Decimal
+    issued_date: date
+    description: Optional[str] = None
 
 
-class TransactionsAdminSchema(TransactionsBaseSchema):
-    id = fields.Int(dump_only=True)
-    payment_type = fields.Nested("PaymentTypesSchema")
+class TransactionsAdminOut(TransactionsBase):
+    id: Optional[int] = None
+    payment_type: Optional[str] = None
 
 
-class TransactionsPublicSchema(TransactionsBaseSchema):
-    payment_type = fields.Method(serialize="get_payment_type_name", deserialize="load_payment_type")
+class TransactionsPublicOut(TransactionsBase):
+    id: Optional[int] = None
+    payment_type: Optional[str] = None
 
-    def load_payment_type(self, value):
-        return get_payment_type_by_name_srv(name=value)
 
-    def get_payment_type_name(self, obj):
-        return obj.payment_type.type if obj.payment_type else None
+class TransactionsCreate(BaseModel):
+    amount: Decimal
+    issued_date: date
+    description: Optional[str] = None
+    payment_type_id: Optional[int] = None
+    balance_id: Optional[int] = None

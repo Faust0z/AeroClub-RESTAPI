@@ -1,13 +1,16 @@
-from ..extensions import db
+from sqlalchemy import Column, ForeignKey, Integer, String
+from sqlalchemy.orm import Mapped, relationship
+
 from .associations import users_have_roles
+from ..database import Base
 
 
-class Roles(db.Model):
+class Roles(Base):
     __tablename__ = 'roles'
-    id: db.Mapped[int] = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    name: db.Mapped[str] = db.Column(db.String, nullable=False, unique=True)
+    id: Mapped[int] = Column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = Column(String, nullable=False, unique=True)
 
-    users: db.Mapped[list["Users"]] = db.relationship("Users", secondary=users_have_roles, back_populates="roles")
+    users: Mapped[list["Users"]] = relationship("Users", secondary=users_have_roles, back_populates="roles")
 
     def __repr__(self):
         return f"<Role name={self.name}>"

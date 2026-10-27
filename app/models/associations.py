@@ -1,19 +1,24 @@
-from ..extensions import db
+from sqlalchemy import Column, ForeignKey, Integer, Table
 
-itinerary_has_airport_codes = db.Table(
+from ..database import Base
+
+itinerary_has_airport_codes = Table(
     "itinerary_has_airport_codes",
-    db.Column("itinerary_id", db.ForeignKey("itineraries.id"), primary_key=True),
-    db.Column("aeroport_codes_id", db.ForeignKey("airport_codes.id"), primary_key=True),
+    Base.metadata,
+    Column("itinerary_id", ForeignKey("itineraries.id"), primary_key=True),
+    Column("aeroport_codes_id", ForeignKey("airport_codes.id"), primary_key=True),
 )
 
-users_have_roles = db.Table(
+users_have_roles = Table(
     "users_have_roles",
-    db.Column("users_id", db.ForeignKey("users.id"), primary_key=True),
-    db.Column("roles_id", db.ForeignKey("roles.id"), primary_key=True),
+    Base.metadata,
+    Column("users_id", ForeignKey("users.id"), primary_key=True),
+    Column("roles_id", ForeignKey("roles.id"), primary_key=True),
 )
 
-users_have_flight_sessions = db.Table(
+users_have_flight_sessions = Table(
     "users_have_flight_sessions",
-    db.Column("users_id", db.ForeignKey("users.id"), primary_key=True),
-    db.Column("flight_sessions", db.ForeignKey("flight_sessions.id"), primary_key=True),
+    Base.metadata,
+    Column("users_id", ForeignKey("users.id"), primary_key=True),
+    Column("flight_sessions", ForeignKey("flight_sessions.id"), primary_key=True),
 )

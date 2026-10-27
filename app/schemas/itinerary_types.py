@@ -1,11 +1,22 @@
-from marshmallow import fields
-from .base import BaseSchema
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict
 
 
-class ItineraryTypesSchema(BaseSchema):
-    type = fields.Str(required=True)
+class ItineraryTypesBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    type: str
 
 
-class ItineraryTypesUpdateSchema(BaseSchema):
-    id = fields.Int(dump_only=True)
-    type = fields.Str(required=True)
+class ItineraryTypesOut(ItineraryTypesBase):
+    id: Optional[int] = None
+
+
+class ItineraryTypesUpdate(BaseModel):
+    id: Optional[int] = None
+    type: Optional[str] = None
+
+
+class ItineraryTypesCreate(BaseModel):
+    type: str

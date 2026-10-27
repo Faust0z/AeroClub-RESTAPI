@@ -1,0 +1,74 @@
+from typing import Annotated
+
+import jwt
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from passlib.context import CryptContext
+from sqlalchemy.orm import Session
+
+from app.auth.tokens import decode_token, TokenPayload
+from app.database import get_db
+from app.models import Users
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/v1/users/login")
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+def get_password_hash(password: str) -> str:
+    return pwd_context.hash(password)
+
+
+def get_current_user(
+    token: Annotated[str, Depends(oauth2_scheme)],
+    db: Annotated[Session, Depends(get_db)],
+) -> Users:
+    try:
+        payload: TokenPayload = decode_token(token)
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token expired",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    user = db.query(Users).filter(Users.email == payload.sub).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    if not user.status:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account disabled")
+
+    return user
+
+
+def require_admin(user: Annotated[Users, Depends(get_current_user)]) -> Users:
+    if "Admin" not in user.roles:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin role required")
+    return user
+
+
+def require_instructor(user: Annotated[Users, Depends(get_current_user)]) -> Users:
+    if "Instructor" not in user.roles:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Instructor role required")
+    return user
+
+
+def require_admin_or_instructor(user: Annotated[Users, Depends(get_current_user)]) -> Users:
+    if not ({"Admin", "Instructor"} & set(user.roles)):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin or Instructor role required")
+    return user
+
+
+def require_active_user(user: Annotated[Users, Depends(get_current_user)]) -> Users:
+    return user

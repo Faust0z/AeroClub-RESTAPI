@@ -1,13 +1,16 @@
-from ..extensions import db
+from sqlalchemy import Column, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy.orm import Mapped, relationship
+
+from ..database import Base
 
 
-class PaymentTypes(db.Model):
+class PaymentTypes(Base):
     __tablename__ = 'payment_types'
-    id: db.Mapped[int] = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    type: db.Mapped[str] = db.Column(db.String, nullable=False, unique=True)
-    details: db.Mapped[str] = db.Column(db.Text, nullable=True)
+    id: Mapped[int] = Column(Integer, primary_key=True, autoincrement=True)
+    type: Mapped[str] = Column(String, nullable=False, unique=True)
+    details: Mapped[str] = Column(Text, nullable=True)
 
-    transactions: db.Mapped[list["Transactions"]] = db.relationship(back_populates="payment_type")
+    transactions: Mapped[list["Transactions"]] = relationship(back_populates="payment_type")
 
     def __repr__(self):
         return f"type=<{self.type} details={self.details}>"

@@ -1,27 +1,36 @@
-from marshmallow import fields, validates_schema, ValidationError
-from .base import BaseSchema
+from datetime import datetime
+from typing import List, Optional
 
-class ItinerariesSchema(BaseSchema):
-    departure_time = fields.DateTime(required=True)
-    arrival_time = fields.DateTime(required=True)
-    landings_amount = fields.Int(required=True)
-    observations = fields.Str(allow_none=True)
-    itinerary_type = fields.Nested("ItineraryTypesSchema")
-    airport_codes = fields.Nested("AirportCodesSchema", many=True)
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-class ItinerariesCreateSchema(BaseSchema):
-    departure_time = fields.DateTime(required=True)
-    arrival_time = fields.DateTime(required=True)
-    landings_amount = fields.Int(required=True)
-    observations = fields.Str(allow_none=True)
-    itinerary_type = fields.Str(required=True)
-    plane_registration = fields.Str(required=True)
-    airport_codes = fields.Nested("AirportCodesCreateSchema", many=True, required=True)
 
-    @validates_schema
-    def validate_time_range(self, data, **kwargs):
-        if data.get("departure_time") and data.get("arrival_time"):
-            if data["departure_time"] >= data["arrival_time"]:
-                raise ValidationError(
-                    {"arrival_time": "Arrival time must be later than departure time."}
-                )
+class ItinerariesBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    departure_time: datetime
+    arrival_time: datetime
+    landings_amount: int
+    observations: Optional[str] = None
+
+
+class ItinerariesOut(ItinerariesBase):
+    id: Optional[int] = None
+    itinerary_type: Optional[str] = None
+    plane: Optional[str] = None
+    airport_codes: List[str] = []
+
+
+class ItinerariesCreate(BaseModel):
+    departure_time: datetime
+    arrival_time: datetime
+    landings_amount: int
+    observations: Optional[str] = None
+    itinerary_type: str
+    plane_registration: str
+    airport_codes: List[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_time_range(self) -> "ItinerariesCreate":
+        if self.departure_time >= self.arrival_time:
+            raise ValueError("Arrival time must be later than departure time.")
+        return self

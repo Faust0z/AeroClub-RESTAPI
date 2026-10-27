@@ -1,17 +1,26 @@
-from marshmallow import fields
-from .base import BaseSchema
+from datetime import date, datetime
+from decimal import Decimal
+from typing import List, Optional
+
+from pydantic import BaseModel, ConfigDict
 
 
-class FlightSessionsSchema(BaseSchema):
-    issued_date = fields.Date(dump_only=True)
-    observations = fields.Str(allow_none=True)
-    flight_session_identifier = fields.Int(dump_only=True)
-    itineraries = fields.Nested("ItinerariesSchema", many=True)
+class FlightSessionsBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    issued_date: date
+    observations: Optional[str] = None
+    flight_session_identifier: int
 
 
-class FlightSessionsCreateSchema(BaseSchema):
-    user_email = fields.Email(required=True)
-    instructor_email = fields.Email(allow_none=True)
-    issued_date = fields.Date(required=True)
-    observations = fields.Str(allow_none=True)
-    itineraries = fields.Nested("ItinerariesCreateSchema", many=True, required=True)
+class FlightSessionsOut(FlightSessionsBase):
+    id: Optional[int] = None
+    itineraries: List[dict] = []
+
+
+class FlightSessionsCreate(BaseModel):
+    user_email: str
+    instructor_email: Optional[str] = None
+    issued_date: date
+    observations: Optional[str] = None
+    itineraries: List[dict]

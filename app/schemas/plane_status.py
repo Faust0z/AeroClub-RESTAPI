@@ -1,11 +1,22 @@
-from marshmallow import fields
-from .base import BaseSchema
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict
 
 
-class PlaneStatusSchema(BaseSchema):
-    state = fields.Str(required=True)
+class PlaneStatusBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    state: str
 
 
-class PlaneStatusUpdateSchema(BaseSchema):
-    id = fields.Int(dump_only=True)
-    state = fields.Str(required=True)
+class PlaneStatusOut(PlaneStatusBase):
+    id: Optional[int] = None
+
+
+class PlaneStatusUpdate(BaseModel):
+    id: Optional[int] = None
+    state: Optional[str] = None
+
+
+class PlaneStatusCreate(BaseModel):
+    state: str

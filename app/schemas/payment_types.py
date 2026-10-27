@@ -1,13 +1,27 @@
-from marshmallow import fields
-from .base import BaseSchema
+from datetime import date, datetime
+from decimal import Decimal
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict
 
 
-class PaymentTypesSchema(BaseSchema):
-    type = fields.Str(required=True)
-    details = fields.Str(allow_none=True)
+class PaymentTypesBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    type: str
+    details: Optional[str] = None
 
 
-class PaymentTypesUpdateSchema(BaseSchema):
-    id = fields.Int(dump_only=True)
-    type = fields.Str(required=False)
-    details = fields.Str(allow_none=True)
+class PaymentTypesOut(PaymentTypesBase):
+    id: Optional[int] = None
+
+
+class PaymentTypesUpdate(BaseModel):
+    id: Optional[int] = None
+    type: Optional[str] = None
+    details: Optional[str] = None
+
+
+class PaymentTypesCreate(BaseModel):
+    type: str
+    details: Optional[str] = None

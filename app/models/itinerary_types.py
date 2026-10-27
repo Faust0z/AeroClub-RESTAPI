@@ -1,12 +1,15 @@
-from ..extensions import db
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.orm import Mapped, relationship
+
+from ..database import Base
 
 
-class ItineraryTypes(db.Model):
+class ItineraryTypes(Base):
     __tablename__ = 'itinerary_types'
-    id: db.Mapped[int] = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    type: db.Mapped[str] = db.Column(db.String, unique=True)
+    id: Mapped[int] = Column(Integer, primary_key=True, autoincrement=True)
+    type: Mapped[str] = Column(String, unique=True)
 
-    itineraries: db.Mapped[list["Itineraries"]] = db.relationship(back_populates="itinerary_type")
+    itineraries: Mapped[list["Itineraries"]] = relationship(back_populates="itinerary_type")
 
     def __repr__(self):
         return f"type=<{self.type}>"

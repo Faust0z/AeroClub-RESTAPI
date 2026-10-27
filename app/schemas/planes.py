@@ -1,27 +1,48 @@
-from marshmallow import fields
-from .base import BaseSchema
+from datetime import date
+from decimal import Decimal
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict
 
 
-class PlanesSchema(BaseSchema):
-    brand = fields.Str(required=True)
-    model = fields.Str(required=True)
-    registration = fields.Str(required=True)
-    category = fields.Str(required=True)
-    acquisition_date = fields.Date(allow_none=True)
-    fare = fields.Decimal(required=True, as_string=True)
-    consumption_per_hour = fields.Int(required=True)
-    description = fields.Str(allow_none=True)
-    plane_status = fields.Nested("PlaneStatusSchema")
+class PlanesBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    brand: str
+    model: str
+    registration: str
+    category: str
+    acquisition_date: date
+    fare: Decimal
+    consumption_per_hour: int
+    description: Optional[str] = None
+    plane_status_id: Optional[int] = None
 
 
-class PlanesUpdateSchema(BaseSchema):
-    id = fields.Int(dump_only=True)
-    brand = fields.Str(required=False)
-    model = fields.Str(required=False)
-    registration = fields.Str(required=False)
-    category = fields.Str(required=False)
-    acquisition_date = fields.Date(allow_none=True)
-    fare = fields.Decimal(required=False, as_string=True)
-    consumption_per_hour = fields.Int(required=False)
-    description = fields.Str(allow_none=True)
-    plane_status = fields.Nested("PlaneStatusSchema")
+class PlanesOut(PlanesBase):
+    id: Optional[int] = None
+
+
+class PlanesUpdate(BaseModel):
+    id: Optional[int] = None
+    brand: Optional[str] = None
+    model: Optional[str] = None
+    registration: Optional[str] = None
+    category: Optional[str] = None
+    acquisition_date: Optional[date] = None
+    fare: Optional[Decimal] = None
+    consumption_per_hour: Optional[int] = None
+    description: Optional[str] = None
+    plane_status_id: Optional[int] = None
+
+
+class PlanesCreate(BaseModel):
+    brand: str
+    model: str
+    registration: str
+    category: str
+    acquisition_date: date
+    fare: Decimal
+    consumption_per_hour: int
+    description: Optional[str] = None
+    plane_status_id: Optional[int] = None

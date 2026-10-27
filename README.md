@@ -1,39 +1,41 @@
 # AeroClub Backend
 
-A RESTful API for managing aviation training center operations. It handles user authentication, role-based access control, financial ledger accounting, and flight session billing. The backend uses a layered Flask architecture with SQLAlchemy ORM, Marshmallow validation, and stateless JWT authentication.
+A RESTful API for managing aviation training center operations. It handles user authentication, role-based access control, financial ledger accounting, and flight session billing. The backend uses a layered Router, Service, Model architecture with Pydantic v2 validation, SQLAlchemy ORM, and stateless PyJWT authentication.
 
 ## Executive Summary
 
-The system automates the financial and operational workflows of an aviation training center. It replaces manual paper-based tracking with a transactional ledger that records member balances, deposits, and flight-session debits. The architecture follows a layered Controller, Service, Model pattern with centralized error handling and schema-based validation.
+The system automates the financial and operational workflows of an aviation training center. It replaces manual paper-based tracking with a transactional ledger that records member balances, deposits, and flight-session debits. The architecture follows a layered Router to Service to Model pattern with centralized error handling and schema-based validation.
 
 ## Key Architecture Points
 
 - Role-based access control (RBAC) with three cumulative roles: User, Instructor, Admin.
-- Shared decorators for authorization checks: `@active_account_required`, `@admin_required`, `@instructor_required`, `@admin_or_instructor_required`.
-- Controller-to-Service-to-Model layering; services contain business logic and ORM queries.
-- Stateless JWT authentication with 24-hour TTL and role/status claims.
+- FastAPI dependency-based authorization: `require_admin`, `require_instructor`, `require_admin_or_instructor`, `require_active_user`.
+- Router-to-Service-to-Model layering; services contain business logic and ORM queries.
+- Stateless PyJWT authentication with 24-hour TTL and role/status claims.
 - Soft deletion for user accounts via `status=False` and `disabled_at`.
 - Financial integrity via single-transaction atomic commits for flight-session billing.
 - Decimal-precise cost calculation using `decimal.Decimal` to avoid floating-point drift.
+- Automatic OpenAPI documentation at `/docs` and `/openapi.json`.
 
 ## Technical Stack
 
 | Layer | Technology |
 | :--- | :--- |
-| Language/Runtime | Python 3.9 (Docker) |
-| Web Framework | Flask (Blueprint-based controllers) |
+| Language/Runtime | Python 3.12+ |
+| Web Framework | FastAPI (APIRouter-based controllers) |
 | ORM | SQLAlchemy 2.0 |
-| Serialization | Marshmallow 4 |
-| Authentication | Flask-JWT-Extended (stateless JWT) |
+| Serialization | Pydantic v2 |
+| Authentication | PyJWT (stateless JWT) |
 | Database | PostgreSQL (production), SQLite (local development) |
-| Migrations | Flask-Migrate / Alembic |
+| Migrations | Alembic |
+| Server | Uvicorn |
 | Containerization | Docker, Docker Compose |
 
 ## Configuration and Deployment (Quick Start)
 
 ### Prerequisites
 
-- Python 3.9 or 3.12+
+- Python 3.12+
 - PostgreSQL (or SQLite for local development)
 - Docker and Docker Compose (optional)
 
@@ -44,11 +46,13 @@ Create a `.env` file in the project root:
 ```properties
 DB_URI=postgresql://user:password@localhost:5433/aeroclub
 SECRET_KEY=your_supersecure_secret_key
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_HOURS=24
 CORS_ORIGINS=http://localhost:3000,http://localhost:4200
 DEBUG=True
 ```
 
-`DB_URI` and `SECRET_KEY` are required. `CORS_ORIGINS` and `DEBUG` are optional.
+`DB_URI` and `SECRET_KEY` are required. `ALGORITHM`, `ACCESS_TOKEN_EXPIRE_HOURS`, `CORS_ORIGINS`, and `DEBUG` are optional.
 
 ### Local Setup
 
@@ -64,10 +68,11 @@ pip install -r requirements.txt
 python database_filler.py
 
 # Run the application
-python app.py
+uvicorn app.main:app --reload
+# or: python app.py
 ```
 
-The API listens on `http://localhost:5000` by default.
+The API listens on `http://localhost:8000` by default. Interactive docs at `http://localhost:8000/docs`.
 
 ### Docker
 
@@ -88,10 +93,10 @@ Permissions are cumulative. Higher roles inherit all permissions of lower roles.
 | Role | Scope |
 | :--- | :--- |
 | User | Own profile, balance, transactions, and flight sessions. Read-only access to lookup data (planes, airport codes, payment types, etc.). |
-| Instructor | Inherits User. Read access to other users via `UsersInstructorSchema`. |
+| Instructor | Inherits User. Read access to other users. |
 | Admin | Inherits User. Full CRUD on users, planes, roles, transactions, and flight sessions. |
 
-Authorization is enforced through shared decorators applied at the controller level. Protected endpoints require a valid JWT and specific role claims.
+Authorization is enforced through FastAPI dependency injection applied at the route level. Protected endpoints require a valid JWT and specific role claims.
 
 ### Flight Session Billing
 
@@ -109,7 +114,7 @@ If any step fails, the entire operation rolls back. This guarantees that no flig
 - Registration creates a `User` role and a zeroed `Balances` row.
 - The `User` role cannot be revoked.
 - Accounts are soft-deactivated by setting `status=False` and populating `disabled_at`.
-- Disabled accounts are blocked by the `@active_account_required` decorator reading the `status` claim from the JWT.
+- Disabled accounts are blocked by the `require_active_user` dependency reading the `status` claim from the JWT.
 
 ### Cost Calculation
 
@@ -129,9 +134,9 @@ Costs are computed with `decimal.Decimal` and quantized to two decimal places us
 
 The API uses stateless JWTs with embedded role and status claims. This eliminates the need for a server-side session store and simplifies horizontal scaling. The trade-off is delayed revocation: a user disabled after login retains access for up to 24 hours, until the token expires. There is no token blacklist or revocation store.
 
-### Controller-Level Authorization
+### Dependency-Level Authorization
 
-Authorization checks are centralized in decorators rather than duplicated inline in each controller. This reduces drift and makes the permission model easier to audit. The `@admin_or_instructor_required` decorator handles endpoints accessible to both Admin and Instructor roles.
+Authorization checks are centralized in FastAPI dependencies rather than duplicated inline in each route. This reduces drift and makes the permission model easier to audit. The `require_admin_or_instructor` dependency handles endpoints accessible to both Admin and Instructor roles.
 
 ### No Balance Limits
 
@@ -143,11 +148,9 @@ Users are deactivated, not hard-deleted. There is no endpoint to permanently rem
 
 ### Schema Layer
 
-Marshmallow schemas handle input validation and output serialization. Separate schemas exist for different roles (e.g., `UsersAdminSchema`, `UsersInstructorSchema`, `UsersSchema`) to enforce field-level access control in the response layer.
+Pydantic v2 schemas handle input validation and output serialization. Separate schemas exist for different roles (e.g., `UsersAdminOut`, `UsersInstructorOut`, `UsersOut`) to enforce field-level access control in the response layer.
 
 ### Current Limitations
 
 - No automated test suite or CI pipeline.
-- No OpenAPI/Swagger specification; Postman is the primary API contract.
-- Some controllers referenced in `app/__init__.py` (planes, flight_sessions, airport_codes, payment_types, itinerary_types, plane_status) are registered as Blueprints but their implementation files are not present in the current repository state.
-- Python version inconsistency: the Dockerfile pins `python:3.9-alpine` while local development uses Python 3.12+.
+- API responses follow FastAPI defaults (no `{"data": ...}` wrapper). Postman collection needs updating for the new response shape.

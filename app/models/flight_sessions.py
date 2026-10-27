@@ -1,21 +1,24 @@
 from datetime import date
 
+from sqlalchemy import Column, Date, ForeignKey, Integer, Text
+from sqlalchemy.orm import Mapped, relationship
+
 from .associations import users_have_flight_sessions
-from ..extensions import db
+from ..database import Base
 
 
-class FlightSessions(db.Model):
+class FlightSessions(Base):
     __tablename__ = "flight_sessions"
-    id: db.Mapped[int] = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    flight_session_identifier: db.Mapped[int] = db.Column(db.Integer, nullable=False)
-    issued_date: db.Mapped[date] = db.Column(db.Date, nullable=False)
-    observations: db.Mapped[str] = db.Column(db.Text, nullable=True)
-    transaction_id: db.Mapped[int] = db.Column(db.ForeignKey("transactions.id"))
+    id: Mapped[int] = Column(Integer, primary_key=True, autoincrement=True)
+    flight_session_identifier: Mapped[int] = Column(Integer, nullable=False)
+    issued_date: Mapped[date] = Column(Date, nullable=False)
+    observations: Mapped[str] = Column(Text, nullable=True)
+    transaction_id: Mapped[int] = Column(ForeignKey("transactions.id"))
 
-    users: db.Mapped[list["Users"]] = db.relationship("Users", secondary=users_have_flight_sessions,
-                                                      back_populates="flight_sessions")
-    transactions: db.Mapped[list["Transactions"]] = db.relationship(back_populates="flight_sessions")
-    itineraries: db.Mapped[list["Itineraries"]] = db.relationship(back_populates="flight_sessions")
+    users: Mapped[list["Users"]] = relationship("Users", secondary=users_have_flight_sessions,
+                                                  back_populates="flight_sessions")
+    transactions: Mapped[list["Transactions"]] = relationship(back_populates="flight_sessions")
+    itineraries: Mapped[list["Itineraries"]] = relationship(back_populates="flight_sessions")
 
     def __repr__(self):
         return f"<issued_date={self.issued_date} flight_session_identifier={self.flight_session_identifier}>"

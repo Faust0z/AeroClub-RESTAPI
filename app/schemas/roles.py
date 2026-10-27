@@ -1,15 +1,24 @@
-from marshmallow import fields
-from .base import BaseSchema
+from datetime import date, datetime
+from decimal import Decimal
+from typing import Annotated, List, Optional
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
-class RolesSchema(BaseSchema):
-    name = fields.Str(required=True, dump_only=True)
+class RolesBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    name: str
 
 
-class RolesUserUpdateSchema(BaseSchema):
-    name = fields.Str(required=False, dump_only=True)
+class RolesOut(RolesBase):
+    pass
 
 
-class RolesUpdateSchema(BaseSchema):
-    id = fields.Int(dump_only=True)
-    name = fields.Str(required=False)
+class RolesUpdate(BaseModel):
+    id: Optional[int] = None
+    name: Optional[str] = None
+
+
+class RolesCreate(BaseModel):
+    name: str

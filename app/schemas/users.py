@@ -1,59 +1,57 @@
-from marshmallow import fields, validate
-from .base import BaseSchema
+from datetime import date
+from typing import Annotated, List, Optional
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
-class UsersRegisterSchema(BaseSchema):
-    first_name = fields.Str(required=True)
-    last_name = fields.Str(required=True)
-    phone_number = fields.Str(required=True)
-    address = fields.Str(allow_none=True)
-    email = fields.Email(required=True)
-    password = fields.Str(required=True, load_only=True, validate=validate.Length(min=8))
+class UsersBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    first_name: str
+    last_name: str
+    phone_number: str
+    address: Optional[str] = None
+    email: EmailStr
+    created_at: date
+    status: bool
 
 
-class UsersSchema(BaseSchema):
-    first_name = fields.Str(required=True)
-    last_name = fields.Str(required=True)
-    phone_number = fields.Str(required=True)
-    address = fields.Str(allow_none=True)
-    email = fields.Email(dump_only=True)
-    created_at = fields.Date(dump_only=True)
-    roles = fields.Nested("RolesSchema", many=True, dump_only=True)
+class UsersRegister(BaseModel):
+    first_name: str
+    last_name: str
+    phone_number: str
+    address: Optional[str] = None
+    email: EmailStr
+    password: Annotated[str, Field(min_length=8)]
 
 
-class UsersUpdateSchema(BaseSchema):
-    first_name = fields.Str(required=False)
-    last_name = fields.Str(required=False)
-    phone_number = fields.Str(required=False)
-    address = fields.Str(allow_none=True)
-    password = fields.Str(required=False, load_only=True)
-    roles = fields.Nested("RolesUserUpdateSchema", many=True, dump_only=True)
+class UsersOut(UsersBase):
+    roles: List["RolesOut"] = []
 
 
-class UsersAdminUpdateSchema(BaseSchema):
-    id = fields.Int(dump_only=True)
-    first_name = fields.Str(required=False)
-    last_name = fields.Str(required=False)
-    phone_number = fields.Str(required=False)
-    address = fields.Str(allow_none=True)
-    email = fields.Email(required=False)
-    password = fields.Str(required=False, load_only=True)
-    roles = fields.List(fields.Nested("RolesUpdateSchema"), required=False)
+class UsersInstructorOut(UsersBase):
+    pass
 
 
-class UsersInstructorSchema(BaseSchema):
-    first_name = fields.Str(required=True, dump_only=True)
-    last_name = fields.Str(required=True, dump_only=True)
-    phone_number = fields.Str(required=True, dump_only=True)
-    email = fields.Email(dump_only=True)
-    status = fields.Bool(dump_only=True)
+class UsersAdminOut(UsersBase):
+    roles: List["RolesOut"] = []
 
 
-class UsersAdminSchema(BaseSchema):
-    first_name = fields.Str(required=False)
-    last_name = fields.Str(required=False)
-    phone_number = fields.Str(required=False)
-    address = fields.Str(allow_none=True)
-    email = fields.Email(required=False)
-    status = fields.Bool(required=False)
-    roles = fields.Nested("RolesSchema", many=True, required=False)
+class UsersUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone_number: Optional[str] = None
+    address: Optional[str] = None
+    password: Optional[str] = None
+
+
+class UsersAdminUpdate(BaseModel):
+    id: Optional[int] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone_number: Optional[str] = None
+    address: Optional[str] = None
+    email: Optional[EmailStr] = None
+    password: Optional[str] = None
+    status: Optional[bool] = None
+    roles: Optional[List["RolesOut"]] = None

@@ -1,12 +1,19 @@
-from marshmallow import fields
-from .base import BaseSchema
+from decimal import Decimal
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict
 
 
-class BalancesSchema(BaseSchema):
-    balance = fields.Decimal(required=True, dump_only=True, as_string=True)
-    user = fields.Nested("UsersInstructorSchema")
+class BalancesBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    balance: Decimal
 
 
-class BalancesUpdateSchema(BalancesSchema):
-    id = fields.Int(dump_only=True)
-    balance = fields.Decimal(required=False, as_string=True)
+class BalancesOut(BalancesBase):
+    user_id: Optional[int] = None
+
+
+class BalancesUpdate(BaseModel):
+    id: Optional[int] = None
+    balance: Optional[Decimal] = None
