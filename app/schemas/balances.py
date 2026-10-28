@@ -12,7 +12,7 @@ class BalancesBase(BaseModel):
 
 
 class BalancesOut(BalancesBase):
-    user_id: Optional[int] = None
+    user_id: Optional[UUID] = None
 
 
 class BalancesUpdate(BaseModel):

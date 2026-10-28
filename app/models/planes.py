@@ -18,7 +18,7 @@ class Planes(Base):
     consumption_per_hour: Mapped[int] = mapped_column(Integer, nullable=False)
     fare: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
     description: Mapped[str] = mapped_column(Text)
-    plane_status_id: Mapped[int] = mapped_column(ForeignKey('plane_status.id'))
+    plane_status_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('plane_status.id'))
 
     itinerary: Mapped[list["Itineraries"]] = relationship(back_populates="plane")
     plane_status: Mapped["PlaneStatus"] = relationship(back_populates="plane")

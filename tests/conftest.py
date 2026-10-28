@@ -43,7 +43,8 @@ def client():
 @pytest.fixture
 def db():
     db = TestingSessionLocal()
-    # Drop and recreate all tables for test isolation
+    # Dispose connection pool and recreate tables for test isolation
+    engine.dispose()
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     # Seed roles
@@ -83,7 +84,7 @@ def auth_headers(client: TestClient, db):
 
 @pytest.fixture
 def admin_headers(client: TestClient, db):
-    """Register an admin user and return auth headers."""
+    """Register an admin user and return auth headers + user UUID."""
     from app.models import Roles, Users
     from app.auth.dependencies import get_password_hash
     from datetime import date
@@ -113,4 +114,4 @@ def admin_headers(client: TestClient, db):
     assert login_resp.status_code == 200, f"Admin login failed: {login_resp.text}"
     token = login_resp.json()["access_token"]
 
-    return {"Authorization": f"Bearer {token}"}
+    return {"Authorization": f"Bearer {token}"}, login_resp.json()["user"]["uuid"]

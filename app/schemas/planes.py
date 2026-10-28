@@ -17,7 +17,7 @@ class PlanesBase(BaseModel):
     fare: Decimal
     consumption_per_hour: int
     description: Optional[str] = None
-    plane_status_id: Optional[int] = None
+    plane_status_id: Optional[UUID] = None
 
 
 class PlanesOut(PlanesBase):
@@ -34,7 +34,7 @@ class PlanesUpdate(BaseModel):
     fare: Optional[Decimal] = None
     consumption_per_hour: Optional[int] = None
     description: Optional[str] = None
-    plane_status_id: Optional[int] = None
+    plane_status_id: Optional[UUID] = None
 
 
 class PlanesCreate(BaseModel):
@@ -46,4 +46,4 @@ class PlanesCreate(BaseModel):
     fare: Decimal
     consumption_per_hour: int
     description: Optional[str] = None
-    plane_status_id: Optional[int] = None
+    plane_status_id: Optional[UUID] = None

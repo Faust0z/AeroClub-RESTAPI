@@ -13,13 +13,13 @@ itinerary_has_airport_codes = Table(
 users_have_roles = Table(
     "users_have_roles",
     Base.metadata,
-    Column("users_id", ForeignKey("users.id"), primary_key=True),
+    Column("users_id", ForeignKey("users.uuid"), primary_key=True),
     Column("roles_id", ForeignKey("roles.id"), primary_key=True),
 )
 
 users_have_flight_sessions = Table(
     "users_have_flight_sessions",
     Base.metadata,
-    Column("users_id", ForeignKey("users.id"), primary_key=True),
+    Column("users_id", ForeignKey("users.uuid"), primary_key=True),
     Column("flight_sessions", ForeignKey("flight_sessions.id"), primary_key=True),
 )

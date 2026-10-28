@@ -26,6 +26,7 @@ class UsersRegister(BaseModel):
 
 
 class UsersOut(UsersBase):
+    uuid: UUID
     roles: List["RolesOut"] = []
 
 
@@ -46,7 +47,7 @@ class UsersUpdate(BaseModel):
 
 
 class UsersAdminUpdate(BaseModel):
-    id: Optional[UUID] = None
+    uuid: Optional[UUID] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     phone_number: Optional[str] = None

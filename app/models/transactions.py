@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Optional
 
 from app.models import FlightSessions
 from sqlalchemy import Column, Date, ForeignKey, Integer, Numeric, Text, UUID
@@ -14,8 +15,8 @@ class Transactions(Base):
     amount: Mapped[float] = Column(Numeric(10, 2), nullable=False)
     issued_date: Mapped[date] = Column(Date, nullable=False)
     description: Mapped[str] = Column(Text, nullable=True)
-    payment_type_id = Column(ForeignKey('payment_types.id'))
-    balance_id = Column(ForeignKey('balances.id'))
+    payment_type_id: Mapped[Optional[uuid.UUID]] = Column(ForeignKey('payment_types.id'))
+    balance_id: Mapped[Optional[uuid.UUID]] = Column(ForeignKey('balances.id'))
 
     balance: Mapped["Balances"] = relationship(back_populates="transactions")
     flight_sessions: Mapped["FlightSessions"] = relationship(back_populates="transactions")

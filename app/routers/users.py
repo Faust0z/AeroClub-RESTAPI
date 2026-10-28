@@ -76,10 +76,10 @@ def get_user_by_id(
     current_user: Annotated[Users, Depends(require_admin_or_instructor)],
 ):
     try:
-        user = get_user_by_id_srv(db=db, user_id=user.uuid)
+        user = get_user_by_id_srv(db=db, user_id=user_id)
     except UserNotFound:
         raise HTTPException(status_code=404, detail="User not found")
-    if "Admin" in current_user.roles:
+    if any(r.name == "Admin" for r in current_user.roles):
         return UsersOut.model_validate(user)
     return UsersInstructorOut.model_validate(user)
 
@@ -92,13 +92,13 @@ def update_user(
     current_user: Annotated[Users, Depends(require_active_user)],
 ):
     caller_id = current_user.uuid
-    is_admin = "Admin" in current_user.roles
+    is_admin = any(r.name == "Admin" for r in current_user.roles)
     if not is_admin and caller_id != user_id:
         raise HTTPException(status_code=403, detail="You do not have permission to access this resource")
 
     schema = UsersAdminUpdate if is_admin else UsersUpdate
     try:
-        user = update_user_srv(db=db, user_id=user.uuid, data=user_data.model_dump(exclude_unset=True))
+        user = update_user_srv(db=db, user_id=current_user.uuid, data=user_data.model_dump(exclude_unset=True))
     except EmailAlreadyExists:
         raise HTTPException(status_code=409, detail="The email given is already registered")
     except UserNotFound:
@@ -113,7 +113,7 @@ def delete_user(
     current_user: Annotated[Users, Depends(require_admin)],
 ):
     try:
-        user = disable_user_srv(db=db, user_id=user.uuid)
+        user = disable_user_srv(db=db, user_id=current_user.uuid)
     except UserNotFound:
         raise HTTPException(status_code=404, detail="User not found")
     return UsersOut.model_validate(user)
@@ -158,6 +158,7 @@ def login(
         "msg": "Login successful",
         "access_token": access_token,
         "user": {
+            "uuid": str(user.uuid),
             "first_name": user.first_name,
             "last_name": user.last_name,
             "roles": roles,

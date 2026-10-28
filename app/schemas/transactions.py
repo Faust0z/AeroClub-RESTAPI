@@ -30,5 +30,5 @@ class TransactionsCreate(BaseModel):
     amount: Decimal
     issued_date: date
     description: Optional[str] = None
-    payment_type_id: Optional[int] = None
-    balance_id: Optional[int] = None
+    payment_type_id: Optional[UUID] = None
+    balance_id: Optional[UUID] = None

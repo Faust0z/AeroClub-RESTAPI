@@ -20,7 +20,6 @@ from app.errors import UserNotFound
 
 def _make_user(user_id: UUID = None) -> Users:
     return Users(
-        id=user_id or uuid4(),
         uuid=user_id or uuid4(),
         email="test@example.com",
         first_name="Test",
@@ -46,8 +45,8 @@ def _make_transaction(transaction_id: UUID = None, amount: Decimal = Decimal("50
         amount=amount,
         issued_date=date.today(),
         description="Test transaction",
-        payment_type_id=1,
-        balance_id=1,
+        payment_type_id=uuid4(),
+        balance_id=uuid4(),
     )
 
 

@@ -50,7 +50,7 @@ def get_user_by_email_srv(db: Session, email: str) -> Users:
     return user
 
 
-def get_user_by_id_srv(db: Session, user_id: UUID) -> Users:
+def get_user_by_id_srv(db: Session, user_id: uuid.UUID) -> Users:
     repo = UserRepository(db)
     user = repo.get_by_id(user_id=user_id)
     if not user:
@@ -99,7 +99,7 @@ def register_user_srv(db: Session, data: dict) -> Users:
     user.roles = [get_role_by_name_srv(db, "User")]
     user.status = True
     from app.models import Balances
-    user.balance = Balances(balance=0, user_id=user.id)
+    user.balance = Balances(balance=0, user_id=user.uuid)
 
     try:
         repo.add(user)
@@ -110,6 +110,8 @@ def register_user_srv(db: Session, data: dict) -> Users:
 
 
 def authenticate_user_srv(db: Session, email: str, password: str) -> Users:
+    from app.auth.dependencies import verify_password
+
     repo = UserRepository(db)
     user = repo.get_by_email(email=email)
     if not user:

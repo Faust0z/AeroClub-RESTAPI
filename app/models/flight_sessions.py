@@ -14,7 +14,7 @@ class FlightSessions(Base):
     flight_session_identifier: Mapped[int] = Column(Integer, nullable=False)
     issued_date: Mapped[date] = Column(Date, nullable=False)
     observations: Mapped[str] = Column(Text, nullable=True)
-    transaction_id: Mapped[int] = Column(ForeignKey("transactions.id"))
+    transaction_id: Mapped[uuid.UUID] = Column(ForeignKey("transactions.id"))
 
     users: Mapped[list["Users"]] = relationship("Users", secondary=users_have_flight_sessions,
                                                   back_populates="flight_sessions")

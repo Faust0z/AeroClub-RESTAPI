@@ -24,7 +24,6 @@ def _make_role(name: str = "User") -> Roles:
 
 def _make_user(user_id: UUID = None, roles: list = None) -> Users:
     return Users(
-        id=user_id or uuid4(),
         uuid=user_id or uuid4(),
         email="test@example.com",
         first_name="Test",
@@ -42,6 +41,7 @@ class TestGetRolesSrv:
         db = MagicMock()
         roles = [_make_role("User"), _make_role("Admin")]
         with patch.object(RoleRepository, "get_all", return_value=roles):
+            db.execute.return_value.unique.return_value.scalars.return_value.all.return_value = roles
             result = get_roles_srv(db=db)
         assert len(result) == 2
         assert roles[0].name == "User"

@@ -16,9 +16,9 @@ class Itineraries(Base):
     arrival_time: Mapped[datetime] = Column(DateTime, nullable=False)
     landings_amount: Mapped[int] = Column(Integer, nullable=False)
     observations: Mapped[str] = Column(Text)
-    itinerary_type_id: Mapped[int] = Column(ForeignKey('itinerary_types.id'))
-    plane_id: Mapped[int] = Column(ForeignKey('planes.id'))
-    invoice_id: Mapped[int] = Column(ForeignKey('flight_sessions.id'))
+    itinerary_type_id: Mapped[uuid.UUID] = Column(ForeignKey('itinerary_types.id'))
+    plane_id: Mapped[uuid.UUID] = Column(ForeignKey('planes.id'))
+    invoice_id: Mapped[uuid.UUID] = Column(ForeignKey('flight_sessions.id'))
 
     airport_codes: Mapped[list["AirportCodes"]] = relationship('AirportCodes', secondary=itinerary_has_airport_codes,
                                                                back_populates="itineraries")

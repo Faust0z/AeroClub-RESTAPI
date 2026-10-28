@@ -21,7 +21,6 @@ from app.errors import UserNotFound, EmailAlreadyExists, AuthError
 
 def _make_user(user_id: UUID = None, email: str = "test@example.com") -> Users:
     return Users(
-        id=user_id or uuid4(),
         uuid=user_id or uuid4(),
         email=email,
         first_name="Test",
@@ -66,7 +65,6 @@ def test_register_user_srv():
         "password": "password123",
     }
     created_user = Users(
-        id=1,
         uuid=uuid4(),
         email="jane@example.com",
         first_name="Jane",
@@ -77,7 +75,7 @@ def test_register_user_srv():
         status=True,
     )
     with patch.object(UserRepository, "add", return_value=created_user):
-        with patch("app.services.users.get_role_by_name_srv", return_value=Roles(id=1, name="User")):
+        with patch("app.services.roles.get_role_by_name_srv", return_value=Roles(name="User")):
             result = register_user_srv(db=db, data=data)
     assert result.email == "jane@example.com"
     assert result.first_name == "Jane"
@@ -87,7 +85,7 @@ def test_authenticate_user_srv_success():
     db = MagicMock()
     user = _make_user(email="test@example.com")
     with patch.object(UserRepository, "get_by_email", return_value=user):
-        with patch("app.services.users.verify_password", return_value=True):
+        with patch("app.auth.dependencies.verify_password", return_value=True):
             result = authenticate_user_srv(db=db, email="test@example.com", password="password123")
     assert result == user
 
@@ -96,7 +94,7 @@ def test_authenticate_user_srv_wrong_password():
     db = MagicMock()
     user = _make_user(email="test@example.com")
     with patch.object(UserRepository, "get_by_email", return_value=user):
-        with patch("app.services.users.verify_password", return_value=False):
+        with patch("app.auth.dependencies.verify_password", return_value=False):
             with pytest.raises(AuthError):
                 authenticate_user_srv(db=db, email="test@example.com", password="wrong")
 
