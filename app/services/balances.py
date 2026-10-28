@@ -1,28 +1,30 @@
+import uuid
 from typing import Optional
 
-from app.models.balances import Balances
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
-from .users import get_user_by_email_srv
-from ..errors import BalanceNotFound
+from app.repositories import BalanceRepository, UserRepository
+from app.schemas import BalancesOut, BalancesUpdate
+from ..errors import BalanceNotFound, UserNotFound
 
 
-def get_balances_srv(db: Session, min_balance: Optional[float] = None, max_balance: Optional[float] = None) -> list[Balances]:
-    stmt = select(Balances)
+def get_balances_srv(
+    db: Session,
+    min_balance: Optional[float] = None,
+    max_balance: Optional[float] = None,
+    skip: int = 0,
+    limit: int = 100,
+) -> list[BalancesOut]:
+    repo = BalanceRepository(db)
+    balances, _total = repo.get_all(
+        min_balance=min_balance, max_balance=max_balance, skip=skip, limit=limit
+    )
+    return [BalancesOut.model_validate(b) for b in balances]
 
-    if min_balance and max_balance:
-        stmt = stmt.where(Balances.balance >= min_balance, Balances.balance <= max_balance)
-    elif min_balance:
-        stmt = stmt.where(Balances.balance >= min_balance)
-    elif max_balance:
-        stmt = stmt.where(Balances.balance <= max_balance)
 
-    return db.execute(stmt).unique().scalars().all()
-
-
-def get_user_balance_by_email_srv(db: Session, email: str) -> Balances:
-    user = get_user_by_email_srv(db=db, email=email)
+def get_user_balance_by_user_id_srv(db: Session, user_id: uuid.UUID) -> BalancesOut:
+    user_repo = UserRepository(db)
+    user = user_repo.get_by_id(user_id=user_id)
+    if not user:
+        raise UserNotFound
     if not user.balance:
         raise BalanceNotFound
-    return user.balance
+    return BalancesOut.model_validate(user.balance)

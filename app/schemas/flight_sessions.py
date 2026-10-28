@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 from typing import List, Optional
-
+from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
 
@@ -14,7 +14,7 @@ class FlightSessionsBase(BaseModel):
 
 
 class FlightSessionsOut(FlightSessionsBase):
-    id: Optional[int] = None
+    id: Optional[UUID] = None
     itineraries: List[dict] = []
 
 

@@ -1,8 +1,9 @@
 from datetime import datetime
 
 from app.models import FlightSessions
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, Text
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, Text, UUID
 from sqlalchemy.orm import Mapped, relationship
+import uuid
 
 from .associations import itinerary_has_airport_codes
 from ..database import Base
@@ -10,7 +11,7 @@ from ..database import Base
 
 class Itineraries(Base):
     __tablename__ = 'itineraries'
-    id: Mapped[int] = Column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[uuid.UUID] = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     departure_time: Mapped[datetime] = Column(DateTime, nullable=False)
     arrival_time: Mapped[datetime] = Column(DateTime, nullable=False)
     landings_amount: Mapped[int] = Column(Integer, nullable=False)

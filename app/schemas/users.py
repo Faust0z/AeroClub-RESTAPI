@@ -1,6 +1,6 @@
 from datetime import date
 from typing import Annotated, List, Optional
-
+from uuid import UUID
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
@@ -46,7 +46,7 @@ class UsersUpdate(BaseModel):
 
 
 class UsersAdminUpdate(BaseModel):
-    id: Optional[int] = None
+    id: Optional[UUID] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     phone_number: Optional[str] = None
@@ -55,3 +55,8 @@ class UsersAdminUpdate(BaseModel):
     password: Optional[str] = None
     status: Optional[bool] = None
     roles: Optional[List["RolesOut"]] = None
+
+
+class UsersLogin(BaseModel):
+    email: EmailStr
+    password: str

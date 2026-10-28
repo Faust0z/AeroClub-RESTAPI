@@ -7,7 +7,7 @@ from app.auth.dependencies import get_current_user, require_admin, require_activ
 from app.database import get_db
 from app.errors import PaymentTypeAlreadyExists, PaymentTypeNotFound
 from app.models import Users
-from app.schemas import PaymentTypesCreate, PaymentTypesOut, PaymentTypesUpdate
+from app.schemas import PaymentTypesCreate, PaymentTypesOut, PaymentTypesUpdate, Page
 from app.services.payment_types import (
     create_payment_type_srv,
     get_payment_type_by_name_srv,
@@ -18,12 +18,15 @@ from app.services.payment_types import (
 router = APIRouter(prefix="/v1/payment_types", tags=["payment_types"])
 
 
-@router.get("/", response_model=List[PaymentTypesOut])
+@router.get("/", response_model=Page[PaymentTypesOut])
 def list_payment_types(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[Users, Depends(require_active_user)],
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
 ):
-    return get_payment_types_srv(db=db)
+    pts, total = get_payment_types_srv(db=db, skip=skip, limit=limit)
+    return Page[PaymentTypesOut](items=pts, total=total, skip=skip, limit=limit)
 
 
 @router.get("/{name}", response_model=PaymentTypesOut)
@@ -45,7 +48,7 @@ def create_payment_type(
     current_user: Annotated[Users, Depends(require_admin)],
 ):
     try:
-        return create_payment_type_srv(db=db, name=pt_data.type, data={"type": pt_data.type, "details": pt_data.details})
+        return create_payment_type_srv(db=db, pt_data=pt_data)
     except PaymentTypeAlreadyExists:
         raise HTTPException(status_code=409, detail="Payment type already exists")
 
@@ -58,7 +61,7 @@ def update_payment_type(
     current_user: Annotated[Users, Depends(require_admin)],
 ):
     try:
-        return update_payment_type_srv(db=db, name=name, data=pt_data.model_dump(exclude_unset=True))
+        return update_payment_type_srv(db=db, name=name, pt_data=pt_data)
     except PaymentTypeNotFound:
         raise HTTPException(status_code=404, detail="Payment type not found")
     except PaymentTypeAlreadyExists:

@@ -1,15 +1,16 @@
 from datetime import date
 
 from app.models import FlightSessions
-from sqlalchemy import Column, Date, ForeignKey, Integer, Numeric, Text
+from sqlalchemy import Column, Date, ForeignKey, Integer, Numeric, Text, UUID
 from sqlalchemy.orm import Mapped, relationship
+import uuid
 
 from ..database import Base
 
 
 class Transactions(Base):
     __tablename__ = 'transactions'
-    id: Mapped[int] = Column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[uuid.UUID] = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     amount: Mapped[float] = Column(Numeric(10, 2), nullable=False)
     issued_date: Mapped[date] = Column(Date, nullable=False)
     description: Mapped[str] = Column(Text, nullable=True)

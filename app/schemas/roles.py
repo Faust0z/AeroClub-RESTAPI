@@ -1,6 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated, List, Optional
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -16,7 +17,7 @@ class RolesOut(RolesBase):
 
 
 class RolesUpdate(BaseModel):
-    id: Optional[int] = None
+    id: Optional[UUID] = None
     name: Optional[str] = None
 
 

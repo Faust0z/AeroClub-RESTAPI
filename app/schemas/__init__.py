@@ -3,6 +3,7 @@ from .balances import BalancesOut, BalancesUpdate
 from .flight_sessions import FlightSessionsCreate, FlightSessionsOut
 from .itineraries import ItinerariesCreate, ItinerariesOut
 from .itinerary_types import ItineraryTypesCreate, ItineraryTypesOut, ItineraryTypesUpdate
+from .pagination import Page
 from .payment_types import PaymentTypesCreate, PaymentTypesOut, PaymentTypesUpdate
 from .plane_status import PlaneStatusCreate, PlaneStatusOut, PlaneStatusUpdate
 from .planes import PlanesCreate, PlanesOut, PlanesUpdate
@@ -12,6 +13,7 @@ from .users import (
     UsersAdminOut,
     UsersAdminUpdate,
     UsersInstructorOut,
+    UsersLogin,
     UsersOut,
     UsersRegister,
     UsersUpdate,
@@ -35,6 +37,7 @@ __all__ = [
     "ItineraryTypesCreate",
     "ItineraryTypesOut",
     "ItineraryTypesUpdate",
+    "Page",
     "PaymentTypesCreate",
     "PaymentTypesOut",
     "PaymentTypesUpdate",
@@ -53,6 +56,7 @@ __all__ = [
     "UsersAdminOut",
     "UsersAdminUpdate",
     "UsersInstructorOut",
+    "UsersLogin",
     "UsersOut",
     "UsersRegister",
     "UsersUpdate",

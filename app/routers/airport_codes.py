@@ -7,7 +7,7 @@ from app.auth.dependencies import get_current_user, require_admin, require_activ
 from app.database import get_db
 from app.errors import AirportCodeAlreadyExists, AirportCodeNotFound
 from app.models import Users
-from app.schemas import AirportCodesCreate, AirportCodesOut, AirportCodesUpdate
+from app.schemas import AirportCodesCreate, AirportCodesOut, AirportCodesUpdate, Page
 from app.services.airport_codes import (
     create_airport_code_srv,
     get_airport_code_by_code_srv,
@@ -18,12 +18,15 @@ from app.services.airport_codes import (
 router = APIRouter(prefix="/v1/airport_codes", tags=["airport_codes"])
 
 
-@router.get("/", response_model=List[AirportCodesOut])
+@router.get("/", response_model=Page[AirportCodesOut])
 def list_airport_codes(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[Users, Depends(require_active_user)],
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
 ):
-    return get_airport_codes_srv(db=db)
+    codes, total = get_airport_codes_srv(db=db, skip=skip, limit=limit)
+    return Page[AirportCodesOut](items=codes, total=total, skip=skip, limit=limit)
 
 
 @router.get("/{code}", response_model=AirportCodesOut)
@@ -45,7 +48,7 @@ def create_airport_code(
     current_user: Annotated[Users, Depends(require_admin)],
 ):
     try:
-        return create_airport_code_srv(db=db, code=code_data.code, data={"code": code_data.code})
+        return create_airport_code_srv(db=db, code_data=code_data)
     except AirportCodeAlreadyExists:
         raise HTTPException(status_code=409, detail="Airport code already exists")
 
@@ -58,7 +61,7 @@ def update_airport_code(
     current_user: Annotated[Users, Depends(require_admin)],
 ):
     try:
-        return update_airport_code_srv(db=db, code=code, data=code_data.model_dump(exclude_unset=True))
+        return update_airport_code_srv(db=db, code=code, code_data=code_data)
     except AirportCodeNotFound:
         raise HTTPException(status_code=404, detail="Airport code not found")
     except AirportCodeAlreadyExists:

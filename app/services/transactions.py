@@ -1,72 +1,72 @@
+import uuid
 from datetime import date
 from typing import Optional
 
-from sqlalchemy import and_, select
-from sqlalchemy.orm import Session
-
-from .balances import get_user_balance_by_email_srv
-from .users import get_user_by_email_srv
-from ..models import Balances, PaymentTypes, Transactions, Users
+from app.models import Transactions
+from app.repositories import TransactionRepository, UserRepository, BalanceRepository
+from app.schemas import TransactionsAdminOut, TransactionsCreate, TransactionsPublicOut
+from ..errors import UserNotFound
 
 
-def get_transactions_srv(db: Session, email: Optional[str] = None, first_name: Optional[str] = None, last_name: Optional[str] = None,
-                         payment_type: Optional[str] = None, starting_date: Optional[date] = None, limit_date: Optional[date] = None) -> \
-        list[Transactions]:
-    stmt = select(Transactions)
-
-    if email or first_name or last_name:
-        stmt = stmt.join(Transactions.balance).join(Balances.user)
-        if email:
-            stmt = stmt.where(Users.email.ilike(f"%{email}%"))
-        if first_name:
-            stmt = stmt.where(Users.first_name.ilike(f"%{first_name}%"))
-        if last_name:
-            stmt = stmt.where(Users.last_name.ilike(f"%{last_name}%"))
-    if payment_type:
-        stmt = stmt.join(Transactions.payment_type).where(PaymentTypes.type == payment_type)
-    if starting_date and limit_date:
-        stmt = stmt.where(and_(Transactions.issued_date >= starting_date, Transactions.issued_date <= limit_date))
-    elif starting_date:
-        stmt = stmt.where(Transactions.issued_date >= starting_date)
-    elif limit_date:
-        stmt = stmt.where(Transactions.issued_date <= limit_date)
-
-    return db.execute(stmt).unique().scalars().all()
-
-
-def get_user_trans_by_email_srv(db: Session, email: str) -> list[Transactions]:
-    user = get_user_by_email_srv(db=db, email=email)
-    return user.balance.transactions
+def get_transactions_srv(
+    db: Session,
+    email: Optional[str] = None,
+    first_name: Optional[str] = None,
+    last_name: Optional[str] = None,
+    payment_type: Optional[str] = None,
+    starting_date: Optional[date] = None,
+    limit_date: Optional[date] = None,
+    skip: int = 0,
+    limit: int = 100,
+) -> list[TransactionsAdminOut]:
+    repo = TransactionRepository(db)
+    transactions, _total = repo.get_all(
+        email=email,
+        first_name=first_name,
+        last_name=last_name,
+        payment_type=payment_type,
+        starting_date=starting_date,
+        limit_date=limit_date,
+        skip=skip,
+        limit=limit,
+    )
+    return [TransactionsAdminOut.model_validate(t) for t in transactions]
 
 
-def sum_user_transaction_srv(db: Session, email: str, data: dict) -> Transactions:
-    """
-    Adds money to the user's balance from an uncommitted transaction payload.
-    """
+def get_user_trans_by_user_id_srv(db: Session, user_id: uuid.UUID, skip: int = 0, limit: int = 100) -> list[TransactionsPublicOut]:
+    user_repo = UserRepository(db)
+    user = user_repo.get_by_id(user_id=user_id)
+    if not user:
+        raise UserNotFound
+    return [TransactionsPublicOut.model_validate(t) for t in user.balance.transactions]
+
+
+def sum_user_transaction_srv(db: Session, user_id: uuid.UUID, data: dict) -> TransactionsPublicOut:
+    from app.models import Transactions
+
+    repo = TransactionRepository(db)
+    balance_repo = BalanceRepository(db)
+    balance = balance_repo.get_by_user_id(user_id=user_id)
+    if not balance:
+        raise UserNotFound
+
     transaction = Transactions(**data)
-    balance = get_user_balance_by_email_srv(db=db, email=email)
     transaction.balance = balance
     balance.balance += transaction.amount
 
-    db.add(transaction)
-    db.commit()
-
-    return transaction
+    repo.add(transaction)
+    return TransactionsPublicOut.model_validate(transaction)
 
 
-def sub_user_transaction_srv(db: Session, email: str, transaction: Transactions) -> Transactions:
-    """
-    These kind of transactions are only to subtract to the user's balance. Called by new flight sessions being created and
-    *flushes* instead of committing to avoid session issues
-    :param email: user's email
-    :param transaction: the user's transaction
-    :return: the transaction with the payment type and user's balance attached
-    """
-    balance = get_user_balance_by_email_srv(db=db, email=email)
+def sub_user_transaction_srv(db: Session, user_id: uuid.UUID, transaction: Transactions) -> TransactionsPublicOut:
+    repo = TransactionRepository(db)
+    balance_repo = BalanceRepository(db)
+    balance = balance_repo.get_by_user_id(user_id=user_id)
+    if not balance:
+        raise UserNotFound
+
     transaction.balance = balance
     balance.balance -= transaction.amount
 
-    db.add(transaction)
-    db.flush()
-
-    return transaction
+    repo.flush()
+    return TransactionsPublicOut.model_validate(transaction)

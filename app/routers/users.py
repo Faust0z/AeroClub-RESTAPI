@@ -1,6 +1,8 @@
+import uuid
 from typing import Annotated, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi_pagination import Page, paginate
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import (
@@ -23,6 +25,7 @@ from app.schemas import (
     UsersAdminOut,
     UsersAdminUpdate,
     UsersInstructorOut,
+    UsersLogin,
     UsersOut,
     UsersRegister,
     UsersUpdate,
@@ -31,6 +34,7 @@ from app.services.users import (
     authenticate_user_srv,
     disable_user_srv,
     get_user_by_email_srv,
+    get_user_by_id_srv,
     get_users_srv,
     register_user_srv,
     update_user_srv,
@@ -39,7 +43,7 @@ from app.services.users import (
 router = APIRouter(prefix="/v1/users", tags=["users"])
 
 
-@router.get("/", response_model=List[UsersOut])
+@router.get("/", response_model=Page[UsersOut])
 def list_users(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[Users, Depends(require_admin_or_instructor)],
@@ -48,13 +52,14 @@ def list_users(
     last_name: Optional[str] = Query(None),
     role_name: Optional[str] = Query(None),
 ):
-    try:
-        users = get_users_srv(db=db, email=email, first_name=first_name, last_name=last_name, role_name=role_name)
-    except AppError as e:
-        raise HTTPException(status_code=e.status_code, detail=e.detail)
-    if "Admin" in current_user.roles:
-        return [UsersOut.model_validate(u) for u in users]
-    return [UsersInstructorOut.model_validate(u) for u in users]
+    stmt = get_users_srv(
+        db=db,
+        email=email,
+        first_name=first_name,
+        last_name=last_name,
+        role_name=role_name,
+    )
+    return paginate(db, stmt)
 
 
 @router.get("/me", response_model=UsersOut)
@@ -64,53 +69,53 @@ def get_my_info(
     return current_user
 
 
-@router.get("/{email}", response_model=UsersOut)
-def get_user_by_email(
-    email: str,
+@router.get("/{user_id}", response_model=UsersOut)
+def get_user_by_id(
+    user_id: uuid.UUID,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[Users, Depends(require_admin_or_instructor)],
 ):
     try:
-        user = get_user_by_email_srv(db=db, email=email)
+        user = get_user_by_id_srv(db=db, user_id=user.uuid)
     except UserNotFound:
-        raise HTTPException(status_code=404, detail="No user found with the given email")
+        raise HTTPException(status_code=404, detail="User not found")
     if "Admin" in current_user.roles:
         return UsersOut.model_validate(user)
     return UsersInstructorOut.model_validate(user)
 
 
-@router.patch("/{email}", response_model=UsersOut)
+@router.patch("/{user_id}", response_model=UsersOut)
 def update_user(
-    email: str,
+    user_id: uuid.UUID,
     user_data: UsersUpdate,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[Users, Depends(require_active_user)],
 ):
-    caller_email = current_user.email
+    caller_id = current_user.uuid
     is_admin = "Admin" in current_user.roles
-    if not is_admin and caller_email != email:
+    if not is_admin and caller_id != user_id:
         raise HTTPException(status_code=403, detail="You do not have permission to access this resource")
 
     schema = UsersAdminUpdate if is_admin else UsersUpdate
     try:
-        user = update_user_srv(db=db, email=email, data=user_data.model_dump(exclude_unset=True))
+        user = update_user_srv(db=db, user_id=user.uuid, data=user_data.model_dump(exclude_unset=True))
     except EmailAlreadyExists:
         raise HTTPException(status_code=409, detail="The email given is already registered")
     except UserNotFound:
-        raise HTTPException(status_code=404, detail="No user found with the given email")
+        raise HTTPException(status_code=404, detail="User not found")
     return UsersOut.model_validate(user)
 
 
-@router.delete("/{email}", response_model=UsersOut)
+@router.delete("/{user_id}", response_model=UsersOut)
 def delete_user(
-    email: str,
+    user_id: uuid.UUID,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[Users, Depends(require_admin)],
 ):
     try:
-        user = disable_user_srv(db=db, email=email)
+        user = disable_user_srv(db=db, user_id=user.uuid)
     except UserNotFound:
-        raise HTTPException(status_code=404, detail="No user found with the given email")
+        raise HTTPException(status_code=404, detail="User not found")
     return UsersOut.model_validate(user)
 
 
@@ -128,12 +133,11 @@ def register_user(
 
 @router.post("/login")
 def login(
+    login_data: UsersLogin,
     db: Annotated[Session, Depends(get_db)],
-    email: str,
-    password: str,
 ):
     try:
-        user = authenticate_user_srv(db=db, email=email, password=password)
+        user = authenticate_user_srv(db=db, email=login_data.email, password=login_data.password)
     except AuthError:
         raise HTTPException(status_code=401, detail="Authentication credentials were not provided or are invalid")
     except UserNotFound:
@@ -146,7 +150,7 @@ def login(
 
     roles = [role.name for role in user.roles] if user.roles else ["User"]
     access_token = create_access_token(
-        subject=user.email,
+        subject=str(user.uuid),
         roles=roles,
         status=user.status,
     )

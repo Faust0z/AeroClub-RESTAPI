@@ -1,13 +1,14 @@
 from typing import Annotated, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi_pagination import Page, paginate
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user, require_admin, require_active_user
 from app.database import get_db
 from app.errors import PlaneNotFound, PlaneRegistrationAlreadyExists
 from app.models import Users
-from app.schemas import PlanesCreate, PlanesOut, PlanesUpdate
+from app.schemas import PlanesCreate, PlanesOut, PlanesUpdate, Page
 from app.services.planes import (
     create_plane_srv,
     get_planes_srv,
@@ -19,7 +20,7 @@ from app.services.planes import (
 router = APIRouter(prefix="/v1/planes", tags=["planes"])
 
 
-@router.get("/", response_model=List[PlanesOut])
+@router.get("/", response_model=Page[PlanesOut])
 def list_planes(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[Users, Depends(require_active_user)],
@@ -27,9 +28,12 @@ def list_planes(
     registration: Optional[str] = Query(None),
     category: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
 ):
-    planes = get_planes_srv(db=db, brand=brand, registration=registration, category=category, status=status)
-    return planes
+    planes, total = get_planes_srv(db=db, brand=brand, registration=registration, category=category, status=status,
+                                   skip=skip, limit=limit)
+    return Page[PlanesOut](items=planes, total=total, skip=skip, limit=limit)
 
 
 @router.get("/{registration}", response_model=PlanesOut)

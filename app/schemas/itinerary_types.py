@@ -1,5 +1,5 @@
 from typing import Optional
-
+from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
 
@@ -10,11 +10,11 @@ class ItineraryTypesBase(BaseModel):
 
 
 class ItineraryTypesOut(ItineraryTypesBase):
-    id: Optional[int] = None
+    id: Optional[UUID] = None
 
 
 class ItineraryTypesUpdate(BaseModel):
-    id: Optional[int] = None
+    id: Optional[UUID] = None
     type: Optional[str] = None
 
 

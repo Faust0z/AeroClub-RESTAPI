@@ -1,17 +1,20 @@
+import uuid
 from datetime import date, datetime, timezone
 from decimal import ROUND_CEILING, ROUND_HALF_UP, Decimal
 from typing import Optional
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, select, func
 from sqlalchemy.orm import Session, joinedload
 
 from app.models import FlightSessions, Itineraries, Planes, Transactions, Users
+from app.repositories import FlightSessionRepository
+from app.schemas import FlightSessionsOut
 from .airport_codes import get_airport_code_by_code_srv
 from .itinerary_types import get_itinerary_type_by_type_srv
 from .payment_types import get_payment_type_by_name_srv
 from .planes import get_plane_by_registration_srv
 from .transactions import sub_user_transaction_srv
-from .users import get_user_by_email_srv
+from .users import get_user_by_id_srv, get_user_by_email_srv
 from ..errors import BadTimeInput, FlightSessionNotFound, UserNotFound
 
 
@@ -25,66 +28,41 @@ def get_flight_sessions_srv(
     observations: Optional[str] = None,
     starting_date: Optional[date] = None,
     limit_date: Optional[date] = None,
-) -> list[FlightSessions]:
-    stmt = select(FlightSessions)
-
-    if flight_session_identifier:
-        stmt = stmt.where(FlightSessions.flight_session_identifier == flight_session_identifier)
-    if admin_email or user_first_name or user_last_name:
-        stmt = stmt.join(FlightSessions.users)
-        if admin_email:
-            stmt = stmt.where(Users.email.ilike(f"%{admin_email}%"))
-        if user_first_name:
-            stmt = stmt.where(Users.first_name.ilike(f"%{user_first_name}%"))
-        if user_last_name:
-            stmt = stmt.where(Users.last_name.ilike(f"%{user_last_name}%"))
-    if plane_registration:
-        stmt = stmt.join(FlightSessions.itineraries).join(Itineraries.plane)
-        stmt = stmt.where(Planes.registration.ilike(f"%{plane_registration}%"))
-    if starting_date and limit_date:
-        stmt = stmt.where(and_(FlightSessions.issued_date >= starting_date, FlightSessions.issued_date <= limit_date))
-    elif starting_date:
-        stmt = stmt.where(FlightSessions.issued_date >= starting_date)
-    elif limit_date:
-        stmt = stmt.where(FlightSessions.issued_date <= limit_date)
-    if observations:
-        stmt = stmt.where(FlightSessions.observations.ilike(f"%{observations}%"))
-
-    return db.execute(stmt).unique().scalars().all()
-
-
-def get_user_flight_sessions_srv(db: Session, email: str) -> list[FlightSessions]:
-    user = db.execute(
-        select(Users)
-        .options(
-            joinedload(Users.flight_sessions).joinedload(FlightSessions.itineraries).joinedload(Itineraries.plane),
-            joinedload(Users.flight_sessions).joinedload(FlightSessions.itineraries).joinedload(Itineraries.airport_codes),
-            joinedload(Users.flight_sessions).joinedload(FlightSessions.users),
-        )
-        .where(Users.email == email)
-    ).unique().scalar_one_or_none()
-    if not user:
-        raise UserNotFound
-    return user.flight_sessions
+):
+    repo = FlightSessionRepository(db)
+    return repo.get_all(
+        flight_session_identifier=flight_session_identifier,
+        plane_registration=plane_registration,
+        admin_email=admin_email,
+        user_first_name=user_first_name,
+        user_last_name=user_last_name,
+        observations=observations,
+        starting_date=starting_date,
+        limit_date=limit_date,
+    )
 
 
 def get_flight_session_by_identifier_srv(db: Session, flight_session_identifier: int) -> FlightSessions:
-    flight_session = db.execute(
-        select(FlightSessions)
-        .options(
-            joinedload(FlightSessions.itineraries).joinedload(Itineraries.plane),
-            joinedload(FlightSessions.itineraries).joinedload(Itineraries.airport_codes),
-            joinedload(FlightSessions.users),
-        )
-        .where(FlightSessions.flight_session_identifier == flight_session_identifier)
-    ).unique().scalar_one_or_none()
-    if not flight_session:
+    repo = FlightSessionRepository(db)
+    session = repo.get_by_identifier(flight_session_identifier=flight_session_identifier)
+    if not session:
         raise FlightSessionNotFound
-    return flight_session
+    return session
 
 
-def create_flight_session_srv(db: Session, flight_session_data: dict, admin_email: str) -> FlightSessions:
-    last_identifier = db.execute(select(db.func.max(FlightSessions.flight_session_identifier))).scalar()
+def get_user_flight_sessions_srv(db: Session, user_id: uuid.UUID) -> list[FlightSessions]:
+    repo = FlightSessionRepository(db)
+    return repo.get_by_user_id(user_id=user_id)
+
+
+def create_flight_session_srv(
+    db: Session,
+    flight_session_data: dict,
+    admin_user_id: uuid.UUID,
+) -> FlightSessions:
+    last_identifier = db.execute(
+        select(func.max(FlightSessions.flight_session_identifier))
+    ).scalar()
     next_identifier = (last_identifier or 0) + 1
     new_flight_session = FlightSessions(
         flight_session_identifier=next_identifier,
@@ -92,8 +70,8 @@ def create_flight_session_srv(db: Session, flight_session_data: dict, admin_emai
         observations=flight_session_data.get("observations"),
     )
 
-    admin = get_user_by_email_srv(db=db, email=admin_email)
-    user = get_user_by_email_srv(db=db, email=flight_session_data["user_email"])
+    admin = get_user_by_id_srv(db=db, user_id=admin_user_id)
+    user = get_user_by_id_srv(db=db, user_id=flight_session_data["user_id"])
     if flight_session_data.get("instructor_email"):
         instructor = get_user_by_email_srv(db=db, email=flight_session_data["instructor_email"])
         new_flight_session.users.append(instructor)
@@ -109,7 +87,7 @@ def create_flight_session_srv(db: Session, flight_session_data: dict, admin_emai
     try:
         new_transaction = sub_user_transaction_srv(
             db=db,
-            email=user.email,
+            user_id=user.uuid,
             transaction=Transactions(
                 amount=total_session_cost,
                 issued_date=datetime.now(timezone.utc),

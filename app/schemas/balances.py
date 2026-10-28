@@ -1,5 +1,6 @@
 from decimal import Decimal
 from typing import Optional
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
@@ -15,5 +16,5 @@ class BalancesOut(BalancesBase):
 
 
 class BalancesUpdate(BaseModel):
-    id: Optional[int] = None
+    id: Optional[UUID] = None
     balance: Optional[Decimal] = None

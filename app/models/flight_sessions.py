@@ -1,7 +1,8 @@
 from datetime import date
 
-from sqlalchemy import Column, Date, ForeignKey, Integer, Text
+from sqlalchemy import Column, Date, ForeignKey, Integer, Text, UUID
 from sqlalchemy.orm import Mapped, relationship
+import uuid
 
 from .associations import users_have_flight_sessions
 from ..database import Base
@@ -9,7 +10,7 @@ from ..database import Base
 
 class FlightSessions(Base):
     __tablename__ = "flight_sessions"
-    id: Mapped[int] = Column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[uuid.UUID] = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     flight_session_identifier: Mapped[int] = Column(Integer, nullable=False)
     issued_date: Mapped[date] = Column(Date, nullable=False)
     observations: Mapped[str] = Column(Text, nullable=True)

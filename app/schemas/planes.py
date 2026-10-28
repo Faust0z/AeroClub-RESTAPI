@@ -1,6 +1,7 @@
 from datetime import date
 from decimal import Decimal
 from typing import Optional
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
@@ -20,11 +21,11 @@ class PlanesBase(BaseModel):
 
 
 class PlanesOut(PlanesBase):
-    id: Optional[int] = None
+    id: Optional[UUID] = None
 
 
 class PlanesUpdate(BaseModel):
-    id: Optional[int] = None
+    id: Optional[UUID] = None
     brand: Optional[str] = None
     model: Optional[str] = None
     registration: Optional[str] = None

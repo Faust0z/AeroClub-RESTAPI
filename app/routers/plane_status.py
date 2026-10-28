@@ -7,7 +7,7 @@ from app.auth.dependencies import get_current_user, require_admin, require_activ
 from app.database import get_db
 from app.errors import PlaneStatusAlreadyExists, PlaneStatusNotFound
 from app.models import Users
-from app.schemas import PlaneStatusCreate, PlaneStatusOut, PlaneStatusUpdate
+from app.schemas import PlaneStatusCreate, PlaneStatusOut, PlaneStatusUpdate, Page
 from app.services.plane_status import (
     create_plane_status_srv,
     get_plane_status_by_name_srv,
@@ -18,12 +18,15 @@ from app.services.plane_status import (
 router = APIRouter(prefix="/v1/plane_status", tags=["plane_status"])
 
 
-@router.get("/", response_model=List[PlaneStatusOut])
+@router.get("/", response_model=Page[PlaneStatusOut])
 def list_plane_status(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[Users, Depends(require_active_user)],
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
 ):
-    return get_planes_status_srv(db=db)
+    pss, total = get_planes_status_srv(db=db, skip=skip, limit=limit)
+    return Page[PlaneStatusOut](items=pss, total=total, skip=skip, limit=limit)
 
 
 @router.get("/{state}", response_model=PlaneStatusOut)
@@ -45,7 +48,7 @@ def create_plane_status(
     current_user: Annotated[Users, Depends(require_admin)],
 ):
     try:
-        return create_plane_status_srv(db=db, name=ps_data.state, data={"state": ps_data.state})
+        return create_plane_status_srv(db=db, ps_data=ps_data)
     except PlaneStatusAlreadyExists:
         raise HTTPException(status_code=409, detail="Plane Status already exists")
 
@@ -58,7 +61,7 @@ def update_plane_status(
     current_user: Annotated[Users, Depends(require_admin)],
 ):
     try:
-        return update_plane_status_srv(db=db, name=state, data=ps_data.model_dump(exclude_unset=True))
+        return update_plane_status_srv(db=db, name=state, ps_data=ps_data)
     except PlaneStatusNotFound:
         raise HTTPException(status_code=404, detail="Plane status not found")
     except PlaneStatusAlreadyExists:

@@ -1,4 +1,5 @@
 from typing import Optional
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
@@ -10,11 +11,11 @@ class PlaneStatusBase(BaseModel):
 
 
 class PlaneStatusOut(PlaneStatusBase):
-    id: Optional[int] = None
+    id: Optional[UUID] = None
 
 
 class PlaneStatusUpdate(BaseModel):
-    id: Optional[int] = None
+    id: Optional[UUID] = None
     state: Optional[str] = None
 
 

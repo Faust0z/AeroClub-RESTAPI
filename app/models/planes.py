@@ -1,14 +1,15 @@
 from datetime import date
 
-from sqlalchemy import Date, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import Date, ForeignKey, Integer, Numeric, String, Text, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+import uuid
 
 from ..database import Base
 
 
 class Planes(Base):
     __tablename__ = 'planes'
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, unique=True, autoincrement=True)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     brand: Mapped[str] = mapped_column(String, nullable=False)
     model: Mapped[str] = mapped_column(String, nullable=False)
     registration: Mapped[str] = mapped_column(String, nullable=False, unique=True)

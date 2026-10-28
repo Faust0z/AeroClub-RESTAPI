@@ -1,12 +1,13 @@
-from sqlalchemy import Column, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import Column, ForeignKey, Integer, Numeric, String, Text, UUID
 from sqlalchemy.orm import Mapped, relationship
+import uuid
 
 from ..database import Base
 
 
 class PaymentTypes(Base):
     __tablename__ = 'payment_types'
-    id: Mapped[int] = Column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[uuid.UUID] = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     type: Mapped[str] = Column(String, nullable=False, unique=True)
     details: Mapped[str] = Column(Text, nullable=True)
 

@@ -2,13 +2,14 @@ from datetime import date
 from typing import Annotated, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi_pagination import Page, paginate
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user, require_admin, require_admin_or_instructor, require_active_user
 from app.database import get_db
 from app.errors import BadTimeInput, FlightSessionNotFound, UserNotFound
 from app.models import Users
-from app.schemas import FlightSessionsCreate, FlightSessionsOut
+from app.schemas import FlightSessionsCreate, FlightSessionsOut, Page
 from app.services.flight_sessions import (
     create_flight_session_srv,
     get_flight_session_by_identifier_srv,
@@ -19,7 +20,7 @@ from app.services.flight_sessions import (
 router = APIRouter(prefix="/v1/flight_sessions", tags=["flight_sessions"])
 
 
-@router.get("/", response_model=List[FlightSessionsOut])
+@router.get("/", response_model=Page[FlightSessionsOut])
 def list_flight_sessions(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[Users, Depends(require_admin_or_instructor)],
@@ -31,8 +32,10 @@ def list_flight_sessions(
     observations: Optional[str] = Query(None),
     starting_date: Optional[date] = Query(None),
     limit_date: Optional[date] = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
 ):
-    sessions = get_flight_sessions_srv(
+    sessions, total = get_flight_sessions_srv(
         db=db,
         flight_session_identifier=flight_session_identifier,
         plane_registration=plane_registration,
@@ -42,8 +45,10 @@ def list_flight_sessions(
         observations=observations,
         starting_date=starting_date,
         limit_date=limit_date,
+        skip=skip,
+        limit=limit,
     )
-    return sessions
+    return Page[FlightSessionsOut](items=sessions, total=total, skip=skip, limit=limit)
 
 
 @router.get("/me", response_model=List[FlightSessionsOut])
@@ -51,10 +56,7 @@ def get_my_flight_sessions(
     current_user: Annotated[Users, Depends(require_active_user)],
     db: Annotated[Session, Depends(get_db)],
 ):
-    try:
-        sessions = get_user_flight_sessions_srv(db=db, email=current_user.email)
-    except UserNotFound:
-        raise HTTPException(status_code=404, detail="No user found with the given email")
+    sessions = get_user_flight_sessions_srv(db=db, user_id=current_user.uuid)
     return sessions
 
 
@@ -81,7 +83,7 @@ def create_flight_session(
         session = create_flight_session_srv(
             db=db,
             flight_session_data=session_data.model_dump(),
-            admin_email=current_user.email,
+            admin_user_id=current_user.uuid,
         )
     except BadTimeInput:
         raise HTTPException(status_code=400, detail="Arrival time is earlier than departure time")

@@ -1,42 +1,50 @@
-from sqlalchemy import select
+from typing import Optional
+
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from typing import Optional
 
-from ..errors import ItineraryTypeNotFound, ItineraryTypeAlreadyExists
-from ..models import ItineraryTypes
-
-
-def get_itinerary_types_srv(db: Session) -> list[ItineraryTypes]:
-    return db.scalars(select(ItineraryTypes)).all()
+from app.repositories import ItineraryTypeRepository
+from app.schemas import ItineraryTypesCreate, ItineraryTypesOut, ItineraryTypesUpdate
+from ..errors import ItineraryTypeAlreadyExists, ItineraryTypeNotFound
 
 
-def get_itinerary_type_by_type_srv(db: Session, type: str) -> ItineraryTypes:
-    itinerary_type = db.execute(select(ItineraryTypes).where(ItineraryTypes.type == type)).scalar_one_or_none()
+def get_itinerary_types_srv(db, skip: int = 0, limit: int = 100) -> list[ItineraryTypesOut]:
+    repo = ItineraryTypeRepository(db)
+    its, _total = repo.get_all(skip=skip, limit=limit)
+    return [ItineraryTypesOut.model_validate(i) for i in its]
+
+
+def get_itinerary_type_by_type_srv(db, type: str) -> ItineraryTypesOut:
+    repo = ItineraryTypeRepository(db)
+    it = repo.get_by_type(type=type)
+    if not it:
+        raise ItineraryTypeNotFound
+    return ItineraryTypesOut.model_validate(it)
+
+
+def create_itinerary_type_srv(db, it_data: ItineraryTypesCreate) -> ItineraryTypesOut:
+    repo = ItineraryTypeRepository(db)
+    from app.models import ItineraryTypes
+    itinerary_type = ItineraryTypes(**it_data.model_dump())
+    try:
+        repo.add(itinerary_type)
+    except IntegrityError:
+        repo.db.rollback()
+        raise ItineraryTypeAlreadyExists
+    return ItineraryTypesOut.model_validate(itinerary_type)
+
+
+def update_itinerary_type_srv(db, type: str, it_data: ItineraryTypesUpdate) -> ItineraryTypesOut:
+    repo = ItineraryTypeRepository(db)
+    itinerary_type = repo.get_by_type(type=type)
     if not itinerary_type:
         raise ItineraryTypeNotFound
-    return itinerary_type
-
-
-def update_itinerary_type_srv(db: Session, type: str, data: dict) -> ItineraryTypes:
-    itinerary_type = get_itinerary_type_by_type_srv(db=db, type=type)
     try:
-        for key, value in data.items():
+        for key, value in it_data.model_dump(exclude_unset=True).items():
             if hasattr(itinerary_type, key):
                 setattr(itinerary_type, key, value)
-        db.commit()
+        repo.update(itinerary_type)
     except IntegrityError:
-        db.rollback()
+        repo.db.rollback()
         raise ItineraryTypeAlreadyExists
-
-    return itinerary_type
-
-
-def create_itinerary_type_srv(db: Session, type: str, data: dict) -> ItineraryTypes:
-    itinerary_type = ItineraryTypes(**data)
-    try:
-        db.add(itinerary_type)
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        raise ItineraryTypeAlreadyExists
-    return itinerary_type
+    return ItineraryTypesOut.model_validate(itinerary_type)

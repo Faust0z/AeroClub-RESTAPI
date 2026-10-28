@@ -1,4 +1,5 @@
 from typing import List, Optional
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
@@ -10,7 +11,7 @@ class AirportCodesBase(BaseModel):
 
 
 class AirportCodesOut(AirportCodesBase):
-    id: Optional[int] = None
+    id: Optional[UUID] = None
 
 
 class AirportCodesCreate(BaseModel):
@@ -18,5 +19,5 @@ class AirportCodesCreate(BaseModel):
 
 
 class AirportCodesUpdate(BaseModel):
-    id: Optional[int] = None
+    id: Optional[UUID] = None
     code: str

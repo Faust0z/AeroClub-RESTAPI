@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
-
+from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
@@ -14,7 +14,7 @@ class ItinerariesBase(BaseModel):
 
 
 class ItinerariesOut(ItinerariesBase):
-    id: Optional[int] = None
+    id: Optional[UUID] = None
     itinerary_type: Optional[str] = None
     plane: Optional[str] = None
     airport_codes: List[str] = []
